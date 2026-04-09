@@ -34,11 +34,12 @@ button{cursor:pointer}
 .btn-ghost:hover{background:#FFFFFF;color:#0E0807}
 
 /* ========== HERO (FORM-FIRST SPLIT) ========== */
-.hero{position:relative;min-height:100vh;display:flex;align-items:center;overflow:hidden;padding:120px 0 80px}
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:80px 0 60px}
 .hero-bg{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1600288480699-0b0d8a456dd8?w=1920&q=80') center 60%/cover no-repeat;will-change:transform}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(14,8,7,0.88) 0%,rgba(14,8,7,0.72) 50%,rgba(14,8,7,0.55) 100%)}
 .hero-grid{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
 .hero-left{color:#FFFFFF}
+.hero-logo{height:48px;width:auto;margin-bottom:32px}
 .hero-kicker{font-size:13px;font-weight:400;text-transform:uppercase;letter-spacing:0.45em;color:#CAAA6B;margin-bottom:24px}
 .hero-left h1{font-size:56px;font-weight:700;text-transform:uppercase;letter-spacing:-3px;line-height:0.95;color:#FFFFFF;margin-bottom:28px}
 .hero-left h1 span{display:block}
@@ -102,13 +103,19 @@ button{cursor:pointer}
 .testimonial-church{font-size:13px;color:#CAAA6B;font-weight:400;letter-spacing:0.04em}
 
 /* ========== ROLES WE PLACE ========== */
-.roles-section{background:#FFFFFF;padding:100px 0}
-.roles-top{text-align:center;margin-bottom:56px}
+.roles-section{background:#0E0807;padding:100px 0;overflow:hidden}
+.roles-top{text-align:center;margin-bottom:48px}
 .roles-kicker{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.45em;color:#7E7C7A;margin-bottom:16px}
-.roles-headline{font-size:36px;font-weight:700;text-transform:uppercase;letter-spacing:-1px;text-align:center;color:#0E0807}
-.roles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#EEE6D7}
-.role-card{background:#FFFFFF;padding:32px 24px;text-align:center;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#403B3A;transition:all 0.35s ease}
-.role-card:hover{background:#EEE6D7;color:#0E0807}
+.roles-headline{font-size:36px;font-weight:700;text-transform:uppercase;letter-spacing:-1px;text-align:center;color:#FFFFFF}
+.roles-marquee{overflow:hidden;position:relative}
+.roles-marquee::before,.roles-marquee::after{content:'';position:absolute;top:0;bottom:0;width:80px;z-index:2;pointer-events:none}
+.roles-marquee::before{left:0;background:linear-gradient(90deg,#0E0807,transparent)}
+.roles-marquee::after{right:0;background:linear-gradient(270deg,#0E0807,transparent)}
+.roles-track{display:flex;gap:14px;width:max-content;animation:scrollPills 30s linear infinite}
+.roles-track:hover{animation-play-state:paused}
+@keyframes scrollPills{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.role-pill{display:inline-flex;align-items:center;padding:14px 30px;background:rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:100px;font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.6);white-space:nowrap;transition:all 0.35s ease;cursor:default}
+.role-pill:hover{background:rgba(198,172,116,0.15);border-color:rgba(198,172,116,0.4);color:#FFFFFF;transform:translateY(-2px)}
 
 /* ========== STATS ========== */
 .stats-section{background:#0E0807;padding:80px 0}
@@ -149,7 +156,6 @@ button{cursor:pointer}
   .hero-testimonial{display:none}
   .how-grid{grid-template-columns:repeat(2,1fr);gap:32px}
   .testimonials-grid{grid-template-columns:1fr;gap:48px}
-  .roles-grid{grid-template-columns:repeat(2,1fr)}
   .stats-row{flex-wrap:wrap}
   .stat{flex:1 1 50%;min-width:140px}
   .stat+.stat::before{display:none}
@@ -168,7 +174,6 @@ button{cursor:pointer}
   .form-card{padding:24px 18px}
   .form-card .field-row{grid-template-columns:1fr}
   .how-grid{grid-template-columns:1fr;gap:24px}
-  .roles-grid{grid-template-columns:1fr}
   .stat{flex:1 1 100%}
   .stat-number{font-size:44px}
   .how-headline{font-size:24px}
@@ -190,10 +195,6 @@ button{cursor:pointer}
     <a href="#" class="nav-logo">
       <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" alt="One39 Staffing">
     </a>
-    <div class="nav-contact">
-      <a href="tel:9182217404" class="nav-phone">(918) 221-7404</a>
-      <a href="#hero-form" class="btn-ghost nav-cta">START YOUR SEARCH</a>
-    </div>
   </div>
 </nav>
 
@@ -205,6 +206,7 @@ button{cursor:pointer}
 
     <!-- LEFT COLUMN: Value Prop -->
     <div class="hero-left">
+      <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" alt="One39" class="hero-logo">
       <p class="hero-kicker">STAFFING FOR GROWING CHURCHES</p>
       <h1><span>WE FIND PASTORS</span><span>FOR CHURCHES <em>LIKE YOURS.</em></span></h1>
       <ul class="hero-bullets">
@@ -257,9 +259,6 @@ button{cursor:pointer}
               <option>5,000+</option>
             </select>
           </div>
-        </div>
-
-        <div class="field-row">
           <div>
             <label>Position Hiring For <span class="req">*</span></label>
             <select data-field="position" required>
@@ -271,23 +270,21 @@ button{cursor:pointer}
               <option>Children's Pastor</option>
               <option>Campus Pastor</option>
               <option>Creative Director</option>
-              <option>Communications Director</option>
               <option>Operations Director</option>
               <option>Other</option>
             </select>
           </div>
-          <div>
-            <label>Ideal Timeline</label>
-            <select data-field="timeline">
-              <option value="" disabled selected>Select timeline</option>
-              <option>ASAP</option>
-              <option>1 - 3 Months</option>
-              <option>3 - 6 Months</option>
-              <option>6+ Months</option>
-              <option>Just Exploring</option>
-            </select>
-          </div>
         </div>
+
+        <label>Ideal Timeline</label>
+        <select data-field="timeline">
+          <option value="" disabled selected>Select timeline</option>
+          <option>ASAP</option>
+          <option>1 - 3 Months</option>
+          <option>3 - 6 Months</option>
+          <option>6+ Months</option>
+          <option>Just Exploring</option>
+        </select>
 
         <label>Anything else?</label>
         <textarea data-field="notes" placeholder="Tell us about the role, your church culture, or anything helpful..."></textarea>
@@ -387,16 +384,28 @@ button{cursor:pointer}
       <p class="roles-kicker">POSITIONS</p>
       <h2 class="roles-headline">ROLES WE PLACE</h2>
     </div>
-    <div class="roles-grid">
-      <div class="role-card">Lead Pastor</div>
-      <div class="role-card">Executive Pastor</div>
-      <div class="role-card">Worship Pastor</div>
-      <div class="role-card">Student / Youth Pastor</div>
-      <div class="role-card">Children&rsquo;s Pastor</div>
-      <div class="role-card">Campus Pastor</div>
-      <div class="role-card">Creative Director</div>
-      <div class="role-card">Communications Director</div>
-      <div class="role-card">Operations Director</div>
+    <div class="roles-marquee">
+      <div class="roles-track">
+        <span class="role-pill">Lead Pastor</span>
+        <span class="role-pill">Executive Pastor</span>
+        <span class="role-pill">Worship Pastor</span>
+        <span class="role-pill">Student / Youth Pastor</span>
+        <span class="role-pill">Children's Pastor</span>
+        <span class="role-pill">Campus Pastor</span>
+        <span class="role-pill">Creative Director</span>
+        <span class="role-pill">Communications Director</span>
+        <span class="role-pill">Operations Director</span>
+        <!-- Duplicate for seamless loop -->
+        <span class="role-pill">Lead Pastor</span>
+        <span class="role-pill">Executive Pastor</span>
+        <span class="role-pill">Worship Pastor</span>
+        <span class="role-pill">Student / Youth Pastor</span>
+        <span class="role-pill">Children's Pastor</span>
+        <span class="role-pill">Campus Pastor</span>
+        <span class="role-pill">Creative Director</span>
+        <span class="role-pill">Communications Director</span>
+        <span class="role-pill">Operations Director</span>
+      </div>
     </div>
   </div>
 </section>
