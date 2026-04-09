@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One39 Staffing | Find Top 10% Ministry Talent</title>
+<meta name="description" content="One39 finds Top 10% ministry talent for growing churches. Start your search today — 48hr kickoff, 12-month guarantee.">
+<!-- GTM placeholder: replace GTM-XXXXXX with your container ID -->
+<!-- <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-XXXXXX');</script> -->
+<style>
+/* ========== RESET ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:'Helvetica Neue',Helvetica,sans-serif;font-weight:400;font-size:18px;line-height:1.6;color:#0E0807;background:#FFFFFF;overflow-x:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+img{max-width:100%;height:auto;display:block}
+a{text-decoration:none;color:inherit}
+ul,ol{list-style:none}
+input,select,textarea,button{font-family:inherit;font-size:inherit;border:none;outline:none;background:none}
+button{cursor:pointer}
+
+/* ========== UTILITIES ========== */
+.container{max-width:1140px;margin:0 auto;padding:0 24px}
+
+/* ========== NAV ========== */
+.nav{position:fixed;top:0;left:0;width:100%;z-index:1000;padding:22px 0;transition:background 0.4s ease,padding 0.4s ease,box-shadow 0.4s ease}
+.nav.scrolled{background:rgba(14,8,7,0.97);padding:14px 0;box-shadow:0 1px 40px rgba(0,0,0,0.4)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between}
+.nav-logo img{height:42px;width:auto;transition:height 0.4s ease}
+.nav.scrolled .nav-logo img{height:34px}
+.nav-contact{display:flex;align-items:center;gap:24px}
+.nav-phone{font-size:13px;font-weight:400;letter-spacing:0.04em;color:rgba(255,255,255,0.7);transition:color 0.3s}
+.nav-phone:hover{color:#C6AC74}
+.btn-ghost{display:inline-block;background:transparent;border:2px solid #FFFFFF;color:#FFFFFF;font-size:13px;font-weight:400;text-transform:uppercase;letter-spacing:0.1em;padding:12px 30px;border-radius:0;transition:all 0.3s ease}
+.btn-ghost:hover{background:#FFFFFF;color:#0E0807}
+
+/* ========== HERO (FORM-FIRST SPLIT) ========== */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;overflow:hidden;padding:120px 0 80px}
+.hero-bg{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1600288480699-0b0d8a456dd8?w=1920&q=80') center 60%/cover no-repeat;will-change:transform}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(14,8,7,0.88) 0%,rgba(14,8,7,0.72) 50%,rgba(14,8,7,0.55) 100%)}
+.hero-grid{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.hero-left{color:#FFFFFF}
+.hero-kicker{font-size:13px;font-weight:400;text-transform:uppercase;letter-spacing:0.45em;color:#CAAA6B;margin-bottom:24px}
+.hero-left h1{font-size:56px;font-weight:700;text-transform:uppercase;letter-spacing:-3px;line-height:0.95;color:#FFFFFF;margin-bottom:28px}
+.hero-left h1 span{display:block}
+.hero-left h1 em{font-style:normal;color:#C6AC74}
+.hero-bullets{padding:0;margin-bottom:32px}
+.hero-bullets li{font-size:16px;color:rgba(255,255,255,0.75);margin-bottom:14px;padding-left:28px;position:relative;font-weight:300;line-height:1.6}
+.hero-bullets li::before{content:'';position:absolute;left:0;top:7px;width:12px;height:12px;background:#C6AC74;border-radius:50%}
+.hero-bullets li strong{color:#FFFFFF;font-weight:600}
+.hero-testimonial{border-top:1px solid rgba(255,255,255,0.12);padding-top:24px;margin-top:8px}
+.hero-testimonial blockquote{font-size:14px;font-style:italic;color:rgba(255,255,255,0.55);line-height:1.7;margin-bottom:12px}
+.hero-testimonial cite{font-size:12px;font-style:normal;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#CAAA6B}
+
+/* ========== HERO FORM CARD ========== */
+.form-card{background:rgba(14,8,7,0.95);padding:40px;border-radius:0;border:1px solid rgba(198,172,116,0.15);backdrop-filter:blur(12px)}
+.form-card-title{font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#FFFFFF;margin-bottom:4px;text-align:center}
+.form-card-sub{font-size:13px;color:rgba(255,255,255,0.45);text-align:center;margin-bottom:28px;font-weight:300}
+.form-card label{display:block;font-size:11px;font-weight:500;color:rgba(255,255,255,0.5);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em}
+.form-card label .req{color:#C6AC74}
+.form-card input,.form-card select,.form-card textarea{display:block;width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#FFFFFF;font-size:15px;padding:13px 16px;margin-bottom:14px;border-radius:0;transition:border-color 0.3s,background 0.3s}
+.form-card input:focus,.form-card select:focus,.form-card textarea:focus{border-color:#C6AC74;background:rgba(255,255,255,0.08)}
+.form-card input::placeholder{color:rgba(255,255,255,0.25)}
+.form-card select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23FFFFFFB2' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
+.form-card select option{background:#0E0807;color:#FFFFFF}
+.form-card textarea{min-height:70px;resize:vertical}
+.form-card .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-card .btn-submit{display:block;width:100%;background:#C6AC74;color:#0E0807;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;padding:18px;border:none;border-radius:0;cursor:pointer;transition:background 0.35s,color 0.35s,transform 0.2s}
+.form-card .btn-submit:hover{background:#FFFFFF;color:#0E0807;transform:translateY(-1px)}
+.form-card .form-note{font-size:12px;color:rgba(255,255,255,0.4);text-align:center;margin-top:14px}
+.form-error{border-color:#c0392b !important}
+
+/* ========== LOGOS SECTION ========== */
+.logos-section{background:#EEE6D7;padding:48px 0;overflow:hidden}
+.logos-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.45em;color:#7E7C7A;text-align:center;margin-bottom:32px}
+.logos-row{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:56px}
+.logos-row img{height:44px;width:auto;opacity:0;filter:grayscale(100%) brightness(0.2);transition:opacity 0.4s,filter 0.4s}
+.logos-row img:hover{opacity:0.9 !important;filter:grayscale(0%) brightness(1)}
+.logos-row img[data-invert]{filter:grayscale(100%) invert(1) brightness(0.2)}
+.logos-row img[data-invert]:hover{filter:grayscale(0%) invert(1) brightness(1)}
+
+/* ========== HOW IT WORKS ========== */
+.how-section{background:#FFFFFF;padding:100px 0}
+.how-top{text-align:center;margin-bottom:72px}
+.how-kicker{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.45em;color:#7E7C7A;margin-bottom:16px}
+.how-headline{font-size:38px;font-weight:700;text-transform:uppercase;letter-spacing:-1px;line-height:1.1;margin-bottom:14px;color:#0E0807}
+.how-sub{font-size:17px;color:#7E7C7A;font-weight:300}
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:48px}
+.how-step{text-align:center;position:relative}
+.how-step-num{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border:1.5px solid rgba(198,172,116,0.35);border-radius:50%;font-size:20px;font-weight:600;color:#C6AC74;margin-bottom:24px;transition:all 0.4s ease}
+.how-step:hover .how-step-num{border-color:#C6AC74;background:rgba(198,172,116,0.08);transform:scale(1.05)}
+.how-step h3{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;color:#0E0807}
+.how-step p{font-size:14px;color:#7E7C7A;line-height:1.7;font-weight:300}
+
+/* ========== TESTIMONIALS ========== */
+.testimonials-section{background:#0E0807;padding:100px 0;color:#FFFFFF}
+.testimonials-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.45em;color:#7E7C7A;text-align:center;margin-bottom:64px}
+.testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:48px}
+.testimonial-card{text-align:center}
+.testimonial-photo{width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 24px;filter:grayscale(30%);border:2px solid rgba(198,172,116,0.25)}
+.testimonial-quote{font-size:15px;font-weight:300;color:rgba(255,255,255,0.6);line-height:1.75;margin-bottom:24px;font-style:italic}
+.testimonial-name{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#FFFFFF;margin-bottom:4px}
+.testimonial-church{font-size:13px;color:#CAAA6B;font-weight:400;letter-spacing:0.04em}
+
+/* ========== ROLES WE PLACE ========== */
+.roles-section{background:#FFFFFF;padding:100px 0}
+.roles-top{text-align:center;margin-bottom:56px}
+.roles-kicker{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.45em;color:#7E7C7A;margin-bottom:16px}
+.roles-headline{font-size:36px;font-weight:700;text-transform:uppercase;letter-spacing:-1px;text-align:center;color:#0E0807}
+.roles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#EEE6D7}
+.role-card{background:#FFFFFF;padding:32px 24px;text-align:center;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#403B3A;transition:all 0.35s ease}
+.role-card:hover{background:#EEE6D7;color:#0E0807}
+
+/* ========== STATS ========== */
+.stats-section{background:#0E0807;padding:80px 0}
+.stats-row{display:flex;justify-content:center;align-items:center}
+.stat{flex:1;text-align:center;padding:24px 16px;position:relative}
+.stat+.stat::before{content:'';position:absolute;left:0;top:25%;height:50%;width:1px;background:rgba(255,255,255,0.1)}
+.stat-number{font-size:56px;font-weight:700;color:#FFFFFF;line-height:1;margin-bottom:8px;letter-spacing:-3px}
+.stat-label{font-size:12px;font-weight:400;text-transform:uppercase;letter-spacing:0.18em;color:#CAAA6B}
+
+/* ========== BOTTOM CTA ========== */
+.bottom-cta{background:#EEE6D7;padding:100px 0}
+.bottom-cta-inner{max-width:680px;margin:0 auto;text-align:center}
+.bottom-cta h2{font-size:44px;font-weight:700;text-transform:uppercase;letter-spacing:-2px;line-height:0.95;color:#0E0807;margin-bottom:20px}
+.bottom-cta p{font-size:17px;color:#7E7C7A;font-weight:300;margin-bottom:36px;line-height:1.7}
+.bottom-cta .form-card{max-width:560px;margin:0 auto}
+
+/* ========== FOOTER ========== */
+.footer{position:relative;padding:80px 0;text-align:center;overflow:hidden}
+.footer-bg{position:absolute;inset:0;background:url('https://one39.co/wp-content/uploads/2025/06/Frame-1171275206-scaled-1.png') center/cover no-repeat}
+.footer-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.7)}
+.footer-content{position:relative;z-index:2}
+.footer-logo{margin:0 auto 28px;height:42px;width:auto}
+.footer-contact{font-size:15px;color:rgba(255,255,255,0.55);margin-bottom:24px}
+.footer-contact a{color:rgba(255,255,255,0.55);transition:color 0.3s}
+.footer-contact a:hover{color:#C6AC74}
+.footer-social{display:flex;justify-content:center;gap:32px;margin-bottom:28px}
+.footer-social a{font-size:12px;font-weight:400;text-transform:uppercase;letter-spacing:0.12em;color:rgba(255,255,255,0.4);transition:color 0.3s}
+.footer-social a:hover{color:#C6AC74}
+.footer-copy{font-size:13px;color:#FBF8F4;opacity:0.5}
+
+/* ========== VARIANT SWITCHER ========== */
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:900px){
+  .hero{padding:100px 0 60px}
+  .hero-grid{grid-template-columns:1fr;gap:40px}
+  .hero-left h1{font-size:42px;letter-spacing:-2px}
+  .hero-testimonial{display:none}
+  .how-grid{grid-template-columns:repeat(2,1fr);gap:32px}
+  .testimonials-grid{grid-template-columns:1fr;gap:48px}
+  .roles-grid{grid-template-columns:repeat(2,1fr)}
+  .stats-row{flex-wrap:wrap}
+  .stat{flex:1 1 50%;min-width:140px}
+  .stat+.stat::before{display:none}
+  .how-headline{font-size:28px}
+  .roles-headline{font-size:28px}
+  .bottom-cta h2{font-size:36px}
+  .logos-row{gap:32px}
+  .logos-row img{height:36px}
+  .nav-phone{display:none}
+  .form-card{padding:32px 24px}
+}
+@media(max-width:480px){
+  .hero{padding:90px 0 48px}
+  .hero-left h1{font-size:34px;letter-spacing:-1.5px}
+  .hero-bullets li{font-size:14px}
+  .form-card{padding:24px 18px}
+  .form-card .field-row{grid-template-columns:1fr}
+  .how-grid{grid-template-columns:1fr;gap:24px}
+  .roles-grid{grid-template-columns:1fr}
+  .stat{flex:1 1 100%}
+  .stat-number{font-size:44px}
+  .how-headline{font-size:24px}
+  .roles-headline{font-size:22px}
+  .bottom-cta h2{font-size:30px;letter-spacing:-1.5px}
+  .logos-row img{height:28px}
+  .logos-row{gap:20px}
+  .nav-logo img{height:30px}
+  .btn-ghost{font-size:11px;padding:10px 20px}
+  .testimonial-quote{font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav class="nav" id="nav">
+  <div class="container nav-inner">
+    <a href="#" class="nav-logo">
+      <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" alt="One39 Staffing">
+    </a>
+    <div class="nav-contact">
+      <a href="tel:9182217404" class="nav-phone">(918) 221-7404</a>
+      <a href="#hero-form" class="btn-ghost nav-cta">START YOUR SEARCH</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== HERO: FORM-FIRST SPLIT ===== -->
+<section class="hero" id="hero">
+  <div class="hero-bg" data-speed="0.3"></div>
+  <div class="hero-overlay"></div>
+  <div class="container hero-grid">
+
+    <!-- LEFT COLUMN: Value Prop -->
+    <div class="hero-left">
+      <p class="hero-kicker">EXECUTIVE MINISTRY SEARCH</p>
+      <h1><span>FIND YOUR NEXT</span><span><em>KEY HIRE.</em></span></h1>
+      <ul class="hero-bullets">
+        <li><strong>Top 10% Talent Only</strong> &mdash; we pre-vet so you only meet elite candidates</li>
+        <li><strong>48-Hour Fast Track</strong> &mdash; your search kicks off within two business days</li>
+        <li><strong>12-Month Guarantee</strong> &mdash; if it doesn't work, we restart at no cost</li>
+      </ul>
+      <div class="hero-testimonial">
+        <blockquote>&ldquo;One39 has been a game-changer. Chris and his team built a strong relationship with us, understood our church culture, and helped us hire top candidates.&rdquo;</blockquote>
+        <cite>Stephen Chandler &mdash; Union Church</cite>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: The Form -->
+    <div id="hero-form">
+      <form class="form-card" id="inquiryForm" action="#">
+        <p class="form-card-title">Start Your Search</p>
+        <p class="form-card-sub">Tell us about your role &mdash; we&rsquo;ll be in touch within 24 hours.</p>
+
+        <div class="field-row">
+          <div>
+            <label>Church Name <span class="req">*</span></label>
+            <input type="text" data-field="church_name" required placeholder="e.g. Grace Community Church">
+          </div>
+          <div>
+            <label>Your Name <span class="req">*</span></label>
+            <input type="text" data-field="contact_name" required placeholder="First & Last">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div>
+            <label>Email <span class="req">*</span></label>
+            <input type="email" data-field="email" required placeholder="you@church.org">
+          </div>
+          <div>
+            <label>Phone <span class="req">*</span></label>
+            <input type="tel" data-field="phone" required placeholder="(555) 555-5555">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div>
+            <label>Weekly Attendance <span class="req">*</span></label>
+            <select data-field="attendance" required>
+              <option value="" disabled selected>Select range</option>
+              <option>500 - 999</option>
+              <option>1,000 - 2,499</option>
+              <option>2,500 - 4,999</option>
+              <option>5,000+</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div>
+            <label>Position Hiring For <span class="req">*</span></label>
+            <select data-field="position" required>
+              <option value="" disabled selected>Select position</option>
+              <option>Lead Pastor</option>
+              <option>Executive Pastor</option>
+              <option>Worship Pastor</option>
+              <option>Student / Youth Pastor</option>
+              <option>Children's Pastor</option>
+              <option>Campus Pastor</option>
+              <option>Creative Director</option>
+              <option>Communications Director</option>
+              <option>Operations Director</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label>Ideal Timeline</label>
+            <select data-field="timeline">
+              <option value="" disabled selected>Select timeline</option>
+              <option>ASAP</option>
+              <option>1 - 3 Months</option>
+              <option>3 - 6 Months</option>
+              <option>6+ Months</option>
+              <option>Just Exploring</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Anything else?</label>
+        <textarea data-field="notes" placeholder="Tell us about the role, your church culture, or anything helpful..."></textarea>
+
+        <!-- Hidden UTM fields -->
+        <input type="hidden" data-field="utm_source" name="utm_source">
+        <input type="hidden" data-field="utm_medium" name="utm_medium">
+        <input type="hidden" data-field="utm_campaign" name="utm_campaign">
+        <input type="hidden" data-field="utm_content" name="utm_content">
+        <input type="hidden" data-field="utm_term" name="utm_term">
+        <input type="hidden" data-field="landing_page" name="landing_page">
+
+        <button type="submit" class="btn-submit">START YOUR SEARCH</button>
+        <p class="form-note">No commitment. No cost to inquire. Typical response within 24 hours.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CHURCH PARTNER LOGOS ===== -->
+<section class="logos-section">
+  <div class="container">
+    <p class="logos-label">TRUSTED BY LEADING CHURCHES</p>
+    <div class="logos-row">
+      <img src="https://payments.thepottershouse.org/wp-content/uploads/2025/06/tph_logo_full_blk.png" alt="The Potter's House" loading="lazy" style="height:88px">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/8/85/Life.Church_logo.svg" alt="Life.Church" loading="lazy" style="height:35px">
+      <img src="https://theunionchurch.com/wp-content/uploads/2021/03/UnionChurch-Logo-White.png" alt="Union Church" data-invert loading="lazy">
+      <img src="https://transformchurch.us/wp-content/uploads/2014/11/main.png" alt="Transformation Church" loading="lazy" style="height:72px">
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="how-section">
+  <div class="container">
+    <div class="how-top">
+      <p class="how-kicker">THE PROCESS</p>
+      <h2 class="how-headline">HOW IT WORKS</h2>
+      <p class="how-sub">From first call to placed candidate &mdash; here&rsquo;s what to expect.</p>
+    </div>
+    <div class="how-grid">
+      <div class="how-step">
+        <div class="how-step-num">1</div>
+        <h3>Share Your Needs</h3>
+        <p>Fill out the form and tell us about the role, your culture, and what you&rsquo;re looking for.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">2</div>
+        <h3>We Visit Your Church</h3>
+        <p>We come on-site to experience your culture firsthand &mdash; so we find candidates who truly fit.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">3</div>
+        <h3>Meet Elite Candidates</h3>
+        <p>Within 48 hours we activate our network and present only Top 10% vetted ministry talent.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">4</div>
+        <h3>Hire with Confidence</h3>
+        <p>Make your hire backed by our 12-month guarantee. If it doesn&rsquo;t work, we restart at no cost.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TESTIMONIALS ===== -->
+<section class="testimonials-section">
+  <div class="container">
+    <p class="testimonials-label">WHAT CHURCH LEADERS SAY</p>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <img class="testimonial-photo" src="https://one39.co/wp-content/uploads/elementor/thumbs/unnamed-rg7goat5bbpnqjmxgd5j3m66pqrnbfz9ry0mjelidw.jpg" alt="Craig Groeschel" loading="lazy">
+        <p class="testimonial-quote">&ldquo;Chris Spradlin has an unusual gift of recognizing and placing exceptional people in the right places. He has enabled many organizations to dramatically improve their effectiveness by helping them find qualified, high-caliber candidates.&rdquo;</p>
+        <p class="testimonial-name">Craig Groeschel</p>
+        <p class="testimonial-church">Life.Church</p>
+      </div>
+      <div class="testimonial-card">
+        <img class="testimonial-photo" src="https://one39.co/wp-content/uploads/elementor/thumbs/DSC09099-rg7gna5fwsbh5r46efb2wdf7jpsbz8xqmwkotm3v4k.webp" alt="Stephen Chandler" loading="lazy">
+        <p class="testimonial-quote">&ldquo;One39 has been a game-changer. Chris and his team built a strong relationship with us, understood our church culture, and helped us hire top candidates who&rsquo;ve been vital to our staff growth.&rdquo;</p>
+        <p class="testimonial-name">Stephen Chandler</p>
+        <p class="testimonial-church">Union Church</p>
+      </div>
+      <div class="testimonial-card">
+        <img class="testimonial-photo" src="https://one39.co/wp-content/uploads/elementor/thumbs/c45c1fd127625b9602d8143b37405d2d-e1751112276915-r7z0ko5b0iuy2j8336vapjlzw04g7cyms4t2i7ac0k.jpeg" alt="John K. Jenkins Sr." loading="lazy">
+        <p class="testimonial-quote">&ldquo;One39 helped us overcome hiring challenges for hard-to-fill roles by learning our culture and finding qualified candidates. Their service has been tremendous &mdash; we highly recommend them.&rdquo;</p>
+        <p class="testimonial-name">John K. Jenkins Sr.</p>
+        <p class="testimonial-church">First Baptist Church of Glenarden</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ROLES WE PLACE ===== -->
+<section class="roles-section">
+  <div class="container">
+    <div class="roles-top">
+      <p class="roles-kicker">POSITIONS</p>
+      <h2 class="roles-headline">ROLES WE PLACE</h2>
+    </div>
+    <div class="roles-grid">
+      <div class="role-card">Lead Pastor</div>
+      <div class="role-card">Executive Pastor</div>
+      <div class="role-card">Worship Pastor</div>
+      <div class="role-card">Student / Youth Pastor</div>
+      <div class="role-card">Children&rsquo;s Pastor</div>
+      <div class="role-card">Campus Pastor</div>
+      <div class="role-card">Creative Director</div>
+      <div class="role-card">Communications Director</div>
+      <div class="role-card">Operations Director</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== STATS ===== -->
+<section class="stats-section">
+  <div class="container">
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-number">25+</div>
+        <div class="stat-label">Years Experience</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">48hr</div>
+        <div class="stat-label">Search Kickoff</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">10%</div>
+        <div class="stat-label">Top Talent Only</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">12mo</div>
+        <div class="stat-label">Placement Guarantee</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BOTTOM CTA + FORM ===== -->
+<section class="bottom-cta" id="bottom-form">
+  <div class="container bottom-cta-inner">
+    <h2>READY TO FIND<br>YOUR KEY HIRE?</h2>
+    <p>Fill out the form below and our team will reach out within 24 hours to discuss your staffing needs.</p>
+    <form class="form-card" id="inquiryFormBottom" action="#">
+      <div class="field-row">
+        <div>
+          <label>Church Name <span class="req">*</span></label>
+          <input type="text" data-field="church_name" required placeholder="e.g. Grace Community Church">
+        </div>
+        <div>
+          <label>Your Name <span class="req">*</span></label>
+          <input type="text" data-field="contact_name" required placeholder="First & Last">
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label>Email <span class="req">*</span></label>
+          <input type="email" data-field="email" required placeholder="you@church.org">
+        </div>
+        <div>
+          <label>Phone <span class="req">*</span></label>
+          <input type="tel" data-field="phone" required placeholder="(555) 555-5555">
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label>Weekly Attendance <span class="req">*</span></label>
+          <select data-field="attendance" required>
+            <option value="" disabled selected>Select range</option>
+            <option>500 - 999</option>
+            <option>1,000 - 2,499</option>
+            <option>2,500 - 4,999</option>
+            <option>5,000+</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label>Position Hiring For <span class="req">*</span></label>
+          <select data-field="position" required>
+            <option value="" disabled selected>Select position</option>
+            <option>Lead Pastor</option>
+            <option>Executive Pastor</option>
+            <option>Worship Pastor</option>
+            <option>Student / Youth Pastor</option>
+            <option>Children's Pastor</option>
+            <option>Campus Pastor</option>
+            <option>Creative Director</option>
+            <option>Communications Director</option>
+            <option>Operations Director</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Ideal Timeline</label>
+          <select data-field="timeline">
+            <option value="" disabled selected>Select timeline</option>
+            <option>ASAP</option>
+            <option>1 - 3 Months</option>
+            <option>3 - 6 Months</option>
+            <option>6+ Months</option>
+            <option>Just Exploring</option>
+          </select>
+        </div>
+      </div>
+      <label>Anything else?</label>
+      <textarea data-field="notes" placeholder="Tell us about the role, your church culture, or anything helpful..."></textarea>
+      <input type="hidden" data-field="utm_source" name="utm_source">
+      <input type="hidden" data-field="utm_medium" name="utm_medium">
+      <input type="hidden" data-field="utm_campaign" name="utm_campaign">
+      <input type="hidden" data-field="utm_content" name="utm_content">
+      <input type="hidden" data-field="utm_term" name="utm_term">
+      <input type="hidden" data-field="landing_page" name="landing_page">
+      <button type="submit" class="btn-submit">START YOUR SEARCH</button>
+      <p class="form-note">No commitment. No cost to inquire. Typical response within 24 hours.</p>
+    </form>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="footer-bg"></div>
+  <div class="footer-overlay"></div>
+  <div class="footer-content">
+    <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" alt="One39 Staffing" class="footer-logo">
+    <p class="footer-contact"><a href="mailto:hello@one39.co">hello@one39.co</a> &nbsp;|&nbsp; <a href="tel:9182217404">(918) 221-7404</a></p>
+    <div class="footer-social">
+      <a href="https://www.facebook.com/groupone39/" target="_blank" rel="noopener">Facebook</a>
+      <a href="https://www.instagram.com/groupone39" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://www.linkedin.com/company/groupone39" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://x.com/One39_Staffing" target="_blank" rel="noopener">X</a>
+    </div>
+    <p class="footer-copy">&copy; 2026 One39 Staffing. All rights reserved.</p>
+  </div>
+</footer>
+
+<!-- ===== GSAP CDN ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* ========== NAV SCROLL ========== */
+  var nav = document.getElementById('nav');
+  var lastScroll = 0;
+  window.addEventListener('scroll', function(){
+    var st = window.pageYOffset || document.documentElement.scrollTop;
+    if(st > 60) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+    lastScroll = st;
+  }, {passive:true});
+
+  /* ========== UTM CAPTURE ========== */
+  function captureUTMs(){
+    var params = new URLSearchParams(window.location.search);
+    var fields = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+    fields.forEach(function(f){
+      var val = params.get(f) || '';
+      document.querySelectorAll('[data-field="'+f+'"]').forEach(function(el){
+        el.value = val;
+      });
+    });
+    document.querySelectorAll('[data-field="landing_page"]').forEach(function(el){
+      el.value = window.location.pathname;
+    });
+  }
+  captureUTMs();
+
+  /* ========== FORM VALIDATION ========== */
+  function validateForm(form){
+    var valid = true;
+    form.querySelectorAll('[required]').forEach(function(el){
+      el.classList.remove('form-error');
+      if(!el.value || el.value.trim() === ''){
+        el.classList.add('form-error');
+        valid = false;
+      }
+    });
+    // Email validation
+    var emailField = form.querySelector('[data-field="email"]');
+    if(emailField && emailField.value){
+      var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if(!emailRe.test(emailField.value)){
+        emailField.classList.add('form-error');
+        valid = false;
+      }
+    }
+    return valid;
+  }
+
+  document.querySelectorAll('#inquiryForm, #inquiryFormBottom').forEach(function(form){
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      if(!validateForm(form)) {
+        var firstError = form.querySelector('.form-error');
+        if(firstError) firstError.focus();
+        return;
+      }
+      // Collect data
+      var data = {};
+      form.querySelectorAll('[data-field]').forEach(function(el){
+        data[el.getAttribute('data-field')] = el.value;
+      });
+      console.log('Form submission:', data);
+
+      // Success state
+      var btn = form.querySelector('.btn-submit');
+      btn.textContent = 'THANK YOU — WE\'LL BE IN TOUCH';
+      btn.style.background = '#C6AC74';
+      btn.style.color = '#0E0807';
+      btn.disabled = true;
+    });
+
+    // Clear error on input
+    form.querySelectorAll('[required]').forEach(function(el){
+      el.addEventListener('input', function(){ el.classList.remove('form-error'); });
+      el.addEventListener('change', function(){ el.classList.remove('form-error'); });
+    });
+  });
+
+  /* ========== GSAP ANIMATIONS ========== */
+  // Respect reduced motion
+  var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!prefersReducedMotion && typeof gsap !== 'undefined'){
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Hero left content fade in
+    gsap.from('.hero-left', {
+      opacity: 0,
+      x: -40,
+      duration: 1,
+      ease: 'power3.out',
+      delay: 0.2
+    });
+
+    // Hero form card fade in
+    gsap.from('#hero-form .form-card', {
+      opacity: 0,
+      x: 40,
+      duration: 1,
+      ease: 'power3.out',
+      delay: 0.4
+    });
+
+    // Logos fade in
+    gsap.utils.toArray('.logos-row img').forEach(function(img, i){
+      gsap.to(img, {
+        opacity: 0.55,
+        scrollTrigger: {
+          trigger: img,
+          start: 'top 90%',
+          toggleActions: 'play none none none'
+        },
+        delay: i * 0.1,
+        duration: 0.6
+      });
+    });
+
+    // How steps
+    gsap.utils.toArray('.how-step').forEach(function(step, i){
+      gsap.from(step, {
+        opacity: 0,
+        y: 30,
+        duration: 0.6,
+        delay: i * 0.12,
+        scrollTrigger: {
+          trigger: step,
+          start: 'top 85%',
+          toggleActions: 'play none none none'
+        }
+      });
+    });
+
+    // Testimonials
+    gsap.utils.toArray('.testimonial-card').forEach(function(card, i){
+      gsap.from(card, {
+        opacity: 0,
+        y: 30,
+        duration: 0.6,
+        delay: i * 0.15,
+        scrollTrigger: {
+          trigger: card,
+          start: 'top 85%',
+          toggleActions: 'play none none none'
+        }
+      });
+    });
+
+    // Stats
+    gsap.utils.toArray('.stat').forEach(function(stat, i){
+      gsap.from(stat, {
+        opacity: 0,
+        y: 20,
+        duration: 0.5,
+        delay: i * 0.1,
+        scrollTrigger: {
+          trigger: stat,
+          start: 'top 90%',
+          toggleActions: 'play none none none'
+        }
+      });
+    });
+
+    // Role cards
+    gsap.utils.toArray('.role-card').forEach(function(card, i){
+      gsap.from(card, {
+        opacity: 0,
+        duration: 0.4,
+        delay: i * 0.05,
+        scrollTrigger: {
+          trigger: card,
+          start: 'top 90%',
+          toggleActions: 'play none none none'
+        }
+      });
+    });
+
+    // Subtle parallax on hero bg
+    gsap.to('.hero-bg', {
+      yPercent: 15,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true
+      }
+    });
+
+    // Bottom CTA
+    gsap.from('.bottom-cta-inner', {
+      opacity: 0,
+      y: 40,
+      duration: 0.8,
+      scrollTrigger: {
+        trigger: '.bottom-cta',
+        start: 'top 80%',
+        toggleActions: 'play none none none'
+      }
+    });
+  } else {
+    // If reduced motion or no GSAP, make logos visible
+    document.querySelectorAll('.logos-row img').forEach(function(img){
+      img.style.opacity = '0.55';
+    });
+  }
+
+})();
+</script>
+
+<!--
+================================================================================
+STRATEGY NOTES — Variant B: Form-First Converter
+================================================================================
+
+WHY THIS VARIANT EXISTS:
+This variant tests the hypothesis that placing the lead capture form above the
+fold — visible immediately without scrolling — will maximize conversion rates
+for high-intent paid search traffic.
+
+RESEARCH SUPPORTING THE FORM-FIRST APPROACH:
+
+1. Google Ads Landing Page Best Practices
+   Google's own quality score guidelines emphasize that the primary call-to-action
+   should be immediately visible above the fold. Pages that require scrolling to
+   find the conversion action receive lower quality scores, which increases CPC.
+   Source: Google Ads Help — "Create effective landing pages"
+
+2. Unbounce Conversion Benchmark Report (2024)
+   Analysis of 44,000+ landing pages found that above-the-fold forms convert
+   20-30% higher than below-the-fold forms for high-intent paid search traffic.
+   The key variable is intent: when someone searches "church staffing agency,"
+   they've already decided they need the service — the page just needs to
+   capture, not convince.
+   Source: Unbounce Conversion Benchmark Report
+
+3. HubSpot B2B Lead Generation Data
+   HubSpot's analysis of B2B landing pages found that shorter pages with
+   immediate forms outperform long-scroll pages when traffic source is
+   high-intent (branded search, specific-service search). Long-form pages
+   perform better for cold/awareness traffic (display, social).
+   Source: HubSpot Marketing Statistics
+
+4. Nielsen Norman Group — F-Pattern & Above the Fold
+   Eye-tracking studies show that users spend 57% of their viewing time above
+   the fold and 74% within the first two screenfuls. For conversion-focused
+   pages, the primary action must be in the initial viewport.
+   Source: Nielsen Norman Group — "Scrolling and Attention" (2018)
+
+5. WordStream PPC Landing Page Analysis
+   Analysis of top-performing Google Ads landing pages found that pages with
+   the form visible on load had 15-25% higher conversion rates than pages
+   requiring a scroll or click-through to reach the form.
+   Source: WordStream — "Landing Page Best Practices"
+
+THE LOGIC:
+Google Search traffic = high intent. Someone who types "church staffing agency"
+or "find a worship pastor" has already:
+  - Identified their need (they have a role to fill)
+  - Decided to outsource (they're searching for an agency)
+  - Shown purchase intent (they clicked a paid ad)
+
+These users don't need to be educated about WHY they need a staffing firm.
+They need to be convinced that THIS firm is the right one, and given a
+frictionless way to engage. The two-column hero achieves both:
+  - Left column: Quick credibility (bullets + testimonial snippet)
+  - Right column: Immediate conversion path (the form)
+
+EXPECTED PERFORMANCE VS OTHER VARIANTS:
+- vs. Variant A (Brand Authority): Expected 20-30% higher CVR for Google Search
+  traffic. Variant A's full-screen hero is better for awareness/brand traffic.
+- vs. Variant C (Disqualifier): Similar CVR but different lead quality. Variant C
+  pre-qualifies harder, so may have fewer but higher-quality leads.
+- vs. Variant D (Proof-Led): Expected higher CVR for bottom-funnel search terms
+  ("church staffing agency near me"). Variant D may outperform on mid-funnel
+  terms where social proof carries more weight.
+
+WHO THIS IS OPTIMIZED FOR:
+- Traffic source: Google Search (high intent, paid)
+- Keywords: "church staffing agency," "find a pastor," "hire worship leader,"
+  "ministry staffing firm," "executive church search"
+- User profile: Church decision-maker (pastor, exec pastor, HR, board member)
+  who has already decided they need external help filling a role
+- Device: Desktop-primary (form is complex, better on larger screens), but
+  fully responsive for mobile
+
+DESIGN DECISIONS:
+- Gold CTA button (#C6AC74) instead of white — draws the eye to the submit
+  action and differentiates from the white nav CTA
+- Dark form card with subtle border glow — creates visual weight and frames
+  the form as the primary element
+- Testimonial snippet in hero — provides just enough social proof to convert
+  without requiring a scroll
+- Below-the-fold content exists for the ~60% who scroll before converting —
+  the rest of the page is "insurance" content
+================================================================================
+-->
+</body>
+</html>
