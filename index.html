@@ -114,6 +114,10 @@ button{cursor:pointer}
 .roles-track{display:flex;gap:14px;width:max-content;animation:scrollPills 30s linear infinite}
 .roles-track:hover{animation-play-state:paused}
 @keyframes scrollPills{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes scrollPillsReverse{0%{transform:translateX(-50%)}100%{transform:translateX(0)}}
+.roles-track-reverse{animation:scrollPillsReverse 28s linear infinite}
+.roles-track-reverse:hover{animation-play-state:paused}
+.roles-marquee+.roles-marquee{margin-top:14px}
 .role-pill{display:inline-flex;align-items:center;padding:14px 30px;background:rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:100px;font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.6);white-space:nowrap;transition:all 0.35s ease;cursor:default}
 .role-pill:hover{background:rgba(198,172,116,0.15);border-color:rgba(198,172,116,0.4);color:#FFFFFF;transform:translateY(-2px)}
 
@@ -153,6 +157,7 @@ button{cursor:pointer}
   .hero{padding:100px 0 60px}
   .hero-grid{grid-template-columns:1fr;gap:40px}
   .hero-left h1{font-size:42px;letter-spacing:-2px}
+  .hero-logo{height:40px;margin-bottom:24px}
   .hero-testimonial{display:none}
   .how-grid{grid-template-columns:repeat(2,1fr);gap:32px}
   .testimonials-grid{grid-template-columns:1fr;gap:48px}
@@ -161,28 +166,30 @@ button{cursor:pointer}
   .stat+.stat::before{display:none}
   .how-headline{font-size:28px}
   .roles-headline{font-size:28px}
+  .role-pill{padding:12px 24px;font-size:13px}
   .bottom-cta h2{font-size:36px}
-  .logos-row{gap:32px}
-  .logos-row img{height:36px}
-  .nav-phone{display:none}
+  .logos-row{gap:24px}
+  .logos-row img{height:32px !important}
   .form-card{padding:32px 24px}
 }
 @media(max-width:480px){
-  .hero{padding:90px 0 48px}
-  .hero-left h1{font-size:34px;letter-spacing:-1.5px}
-  .hero-bullets li{font-size:14px}
+  .hero{padding:80px 0 40px}
+  .hero-logo{height:36px;margin-bottom:20px}
+  .hero-left h1{font-size:32px;letter-spacing:-1.5px}
+  .hero-kicker{font-size:11px;letter-spacing:0.3em;margin-bottom:16px}
+  .hero-bullets li{font-size:14px;margin-bottom:10px}
   .form-card{padding:24px 18px}
   .form-card .field-row{grid-template-columns:1fr}
+  .form-card-title{font-size:16px}
   .how-grid{grid-template-columns:1fr;gap:24px}
-  .stat{flex:1 1 100%}
-  .stat-number{font-size:44px}
-  .how-headline{font-size:24px}
+  .stat{flex:1 1 50%}
+  .stat-number{font-size:36px}
+  .how-headline{font-size:22px}
   .roles-headline{font-size:22px}
-  .bottom-cta h2{font-size:30px;letter-spacing:-1.5px}
-  .logos-row img{height:28px}
-  .logos-row{gap:20px}
-  .nav-logo img{height:30px}
-  .btn-ghost{font-size:11px;padding:10px 20px}
+  .role-pill{padding:10px 20px;font-size:12px}
+  .bottom-cta h2{font-size:28px;letter-spacing:-1.5px}
+  .logos-row img{height:24px !important}
+  .logos-row{gap:16px}
   .testimonial-quote{font-size:14px}
 }
 </style>
@@ -191,11 +198,7 @@ button{cursor:pointer}
 
 <!-- ===== NAV ===== -->
 <nav class="nav" id="nav">
-  <div class="container nav-inner">
-    <a href="#" class="nav-logo">
-      <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" alt="One39 Staffing">
-    </a>
-  </div>
+  <div class="container nav-inner"></div>
 </nav>
 
 <!-- ===== HERO: FORM-FIRST SPLIT ===== -->
@@ -405,6 +408,29 @@ button{cursor:pointer}
         <span class="role-pill">Creative Director</span>
         <span class="role-pill">Communications Director</span>
         <span class="role-pill">Operations Director</span>
+      </div>
+    </div>
+    <div class="roles-marquee">
+      <div class="roles-track roles-track-reverse">
+        <span class="role-pill">Associate Pastor</span>
+        <span class="role-pill">Connections Director</span>
+        <span class="role-pill">Minister of Music</span>
+        <span class="role-pill">Family Pastor</span>
+        <span class="role-pill">Production Director</span>
+        <span class="role-pill">Teaching Pastor</span>
+        <span class="role-pill">Church Administrator</span>
+        <span class="role-pill">Young Adults Pastor</span>
+        <span class="role-pill">Discipleship Director</span>
+        <!-- Duplicate for seamless loop -->
+        <span class="role-pill">Associate Pastor</span>
+        <span class="role-pill">Connections Director</span>
+        <span class="role-pill">Minister of Music</span>
+        <span class="role-pill">Family Pastor</span>
+        <span class="role-pill">Production Director</span>
+        <span class="role-pill">Teaching Pastor</span>
+        <span class="role-pill">Church Administrator</span>
+        <span class="role-pill">Young Adults Pastor</span>
+        <span class="role-pill">Discipleship Director</span>
       </div>
     </div>
   </div>
