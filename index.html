@@ -108,17 +108,17 @@ button{cursor:pointer}
 .roles-kicker{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.45em;color:#7E7C7A;margin-bottom:16px}
 .roles-headline{font-size:36px;font-weight:700;text-transform:uppercase;letter-spacing:-1px;text-align:center;color:#FFFFFF}
 .roles-marquee{overflow:hidden;position:relative}
-.roles-marquee::before,.roles-marquee::after{content:'';position:absolute;top:0;bottom:0;width:80px;z-index:2;pointer-events:none}
+.roles-marquee::before,.roles-marquee::after{content:'';position:absolute;top:0;bottom:0;width:24px;z-index:2;pointer-events:none}
 .roles-marquee::before{left:0;background:linear-gradient(90deg,#0E0807,transparent)}
 .roles-marquee::after{right:0;background:linear-gradient(270deg,#0E0807,transparent)}
-.roles-track{display:flex;gap:14px;width:max-content;animation:scrollPills 30s linear infinite}
+.roles-track{display:flex;gap:12px;width:max-content;animation:scrollPills 45s linear infinite}
 .roles-track:hover{animation-play-state:paused}
 @keyframes scrollPills{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 @keyframes scrollPillsReverse{0%{transform:translateX(-50%)}100%{transform:translateX(0)}}
-.roles-track-reverse{animation:scrollPillsReverse 28s linear infinite}
+.roles-track-reverse{animation:scrollPillsReverse 40s linear infinite}
 .roles-track-reverse:hover{animation-play-state:paused}
 .roles-marquee+.roles-marquee{margin-top:14px}
-.role-pill{display:inline-flex;align-items:center;padding:14px 30px;background:rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:100px;font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.6);white-space:nowrap;transition:all 0.35s ease;cursor:default}
+.role-pill{display:inline-flex;align-items:center;padding:10px 22px;background:rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:100px;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.6);white-space:nowrap;transition:all 0.35s ease;cursor:default}
 .role-pill:hover{background:rgba(198,172,116,0.15);border-color:rgba(198,172,116,0.4);color:#FFFFFF;transform:translateY(-2px)}
 
 /* ========== STATS ========== */
@@ -167,7 +167,7 @@ button{cursor:pointer}
   .stat+.stat::before{display:none}
   .how-headline{font-size:28px}
   .roles-headline{font-size:28px}
-  .role-pill{padding:12px 24px;font-size:13px}
+  .role-pill{padding:9px 20px;font-size:11px}
   .bottom-cta h2{font-size:36px}
   .logos-row{gap:24px}
   .logos-row img{height:32px !important}
@@ -188,7 +188,7 @@ button{cursor:pointer}
   .stat-number{font-size:36px}
   .how-headline{font-size:22px}
   .roles-headline{font-size:22px}
-  .role-pill{padding:10px 20px;font-size:12px}
+  .role-pill{padding:8px 16px;font-size:10px}
   .bottom-cta h2{font-size:28px;letter-spacing:-1.5px}
   .logos-row img{height:24px !important}
   .logos-row{gap:16px}
