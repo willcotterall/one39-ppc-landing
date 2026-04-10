@@ -626,6 +626,9 @@ button{cursor:pointer}
     return valid;
   }
 
+  // GHL Inbound Webhook (Story Growth Funnel)
+  var WEBHOOK_URL = 'https://services.leadconnectorhq.com/hooks/I9GVEA91SsaZzg0pNW61/webhook-trigger/UUFTyq3oyqa71IfENvix';
+
   document.querySelectorAll('#inquiryForm, #inquiryFormBottom').forEach(function(form){
     form.addEventListener('submit', function(e){
       e.preventDefault();
@@ -639,14 +642,30 @@ button{cursor:pointer}
       form.querySelectorAll('[data-field]').forEach(function(el){
         data[el.getAttribute('data-field')] = el.value;
       });
-      console.log('Form submission:', data);
+      data.submitted_at = new Date().toISOString();
+      data.source = 'hire.one39.co';
 
-      // Success state
+      // Loading state
       var btn = form.querySelector('.btn-submit');
-      btn.textContent = 'THANK YOU — WE\'LL BE IN TOUCH';
-      btn.style.background = '#C6AC74';
-      btn.style.color = '#0E0807';
+      var originalText = btn.textContent;
+      btn.textContent = 'SENDING…';
       btn.disabled = true;
+
+      // POST to GHL webhook, then redirect to thank-you
+      fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).then(function(){
+        // Fire Meta Pixel Lead event if available
+        if(typeof fbq !== 'undefined'){ try { fbq('track', 'Lead'); } catch(e){} }
+        window.location.href = '/thank-you.html';
+      }).catch(function(err){
+        console.error('Form submit failed:', err);
+        // Still redirect — webhook may have received it even on opaque/CORS error
+        if(typeof fbq !== 'undefined'){ try { fbq('track', 'Lead'); } catch(e){} }
+        window.location.href = '/thank-you.html';
+      });
     });
 
     // Clear error on input
