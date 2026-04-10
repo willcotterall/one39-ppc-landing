@@ -40,8 +40,8 @@ button{cursor:pointer}
 .hero-grid{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
 .hero-left{color:#FFFFFF}
 .hero-logo{height:48px;width:auto;margin-bottom:32px}
-.hero-left h1{font-size:20px;font-weight:400;text-transform:uppercase;letter-spacing:0.3em;color:#CAAA6B;margin-bottom:20px;line-height:1.4}
-.hero-kicker{font-size:48px;font-weight:700;text-transform:uppercase;letter-spacing:-2px;line-height:0.95;color:#FFFFFF;margin-bottom:28px}
+.hero-kicker{font-size:13px;font-weight:400;text-transform:uppercase;letter-spacing:0.45em;color:#CAAA6B;margin-bottom:24px}
+.hero-left h1{font-size:56px;font-weight:700;text-transform:uppercase;letter-spacing:-3px;line-height:0.95;color:#FFFFFF;margin-bottom:28px}
 .hero-left h1 span{display:block}
 .hero-left h1 em{font-style:normal;color:#C6AC74}
 .hero-bullets{padding:0;margin-bottom:32px}
@@ -156,8 +156,7 @@ button{cursor:pointer}
 @media(max-width:900px){
   .hero{padding:100px 0 60px}
   .hero-grid{grid-template-columns:1fr;gap:40px}
-  .hero-kicker{font-size:38px;letter-spacing:-1.5px}
-  .hero-left h1{font-size:16px;letter-spacing:0.2em}
+  .hero-left h1{font-size:42px;letter-spacing:-2px}
   .hero-logo{height:40px;margin-bottom:24px}
   .hero-testimonial{display:none}
   .how-grid{grid-template-columns:repeat(2,1fr);gap:32px}
@@ -176,8 +175,7 @@ button{cursor:pointer}
 @media(max-width:480px){
   .hero{padding:80px 0 40px}
   .hero-logo{height:36px;margin-bottom:20px}
-  .hero-kicker{font-size:30px;letter-spacing:-1px}
-  .hero-left h1{font-size:13px;letter-spacing:0.15em}
+  .hero-left h1{font-size:32px;letter-spacing:-1.5px}
   .hero-kicker{font-size:11px;letter-spacing:0.3em;margin-bottom:16px}
   .hero-bullets li{font-size:14px;margin-bottom:10px}
   .form-card{padding:24px 18px}
@@ -212,8 +210,8 @@ button{cursor:pointer}
     <!-- LEFT COLUMN: Value Prop -->
     <div class="hero-left">
       <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" alt="One39" class="hero-logo">
-      <h1>YOUR MINISTRY IS TOO IMPORTANT FOR THE WRONG HIRE.</h1>
       <p class="hero-kicker">ONE39 FINDS, VETS &amp; PLACES SENIOR LEADERS FOR CHURCHES OF 500+.</p>
+      <h1><span>YOUR MINISTRY IS</span><span>TOO IMPORTANT FOR</span><span>THE WRONG HIRE.</span></h1>
       <ul class="hero-bullets">
         <li><strong>You lead your church.</strong> We handle the search, from vetting to placement.</li>
         <li><strong>Only Top 10% candidates.</strong> If we wouldn't hire them, you'll never see them.</li>
@@ -233,8 +231,8 @@ button{cursor:pointer}
 
         <div class="field-row">
           <div>
-            <label>Church Name <span class="req">*</span></label>
-            <input type="text" data-field="church_name" required placeholder="e.g. Grace Community Church">
+            <label>Church Name</label>
+            <input type="text" data-field="church_name" placeholder="e.g. Grace Community Church">
           </div>
           <div>
             <label>Your Name <span class="req">*</span></label>
@@ -258,6 +256,7 @@ button{cursor:pointer}
             <label>Weekly Attendance <span class="req">*</span></label>
             <select data-field="attendance" required>
               <option value="" disabled selected>Select range</option>
+              <option>Under 500</option>
               <option>500 - 999</option>
               <option>1,000 - 2,499</option>
               <option>2,500 - 4,999</option>
@@ -268,14 +267,21 @@ button{cursor:pointer}
             <label>Position Hiring For <span class="req">*</span></label>
             <select data-field="position" required>
               <option value="" disabled selected>Select position</option>
-              <option>Lead Pastor</option>
+              <option>Lead / Senior Pastor</option>
               <option>Executive Pastor</option>
-              <option>Worship Pastor</option>
-              <option>Student / Youth Pastor</option>
-              <option>Children's Pastor</option>
+              <option>Worship Pastor / Music Director</option>
+              <option>Youth / Student Pastor</option>
+              <option>Children's / Family Pastor</option>
               <option>Campus Pastor</option>
-              <option>Creative Director</option>
-              <option>Operations Director</option>
+              <option>Associate Pastor</option>
+              <option>Teaching Pastor</option>
+              <option>Creative / Media Director</option>
+              <option>Connections / Guest Experience</option>
+              <option>Operations / Admin Director</option>
+              <option>Discipleship / Groups Pastor</option>
+              <option>Production Director</option>
+              <option>Communications Director</option>
+              <option>Multiple Positions</option>
               <option>Other</option>
             </select>
           </div>
@@ -470,8 +476,8 @@ button{cursor:pointer}
     <form class="form-card" id="inquiryFormBottom" action="#">
       <div class="field-row">
         <div>
-          <label>Church Name <span class="req">*</span></label>
-          <input type="text" data-field="church_name" required placeholder="e.g. Grace Community Church">
+          <label>Church Name</label>
+          <input type="text" data-field="church_name" placeholder="e.g. Grace Community Church">
         </div>
         <div>
           <label>Your Name <span class="req">*</span></label>
@@ -493,30 +499,37 @@ button{cursor:pointer}
           <label>Weekly Attendance <span class="req">*</span></label>
           <select data-field="attendance" required>
             <option value="" disabled selected>Select range</option>
+            <option>Under 500</option>
             <option>500 - 999</option>
             <option>1,000 - 2,499</option>
             <option>2,500 - 4,999</option>
             <option>5,000+</option>
           </select>
         </div>
-      </div>
-      <div class="field-row">
         <div>
           <label>Position Hiring For <span class="req">*</span></label>
           <select data-field="position" required>
             <option value="" disabled selected>Select position</option>
-            <option>Lead Pastor</option>
+            <option>Lead / Senior Pastor</option>
             <option>Executive Pastor</option>
-            <option>Worship Pastor</option>
-            <option>Student / Youth Pastor</option>
-            <option>Children's Pastor</option>
+            <option>Worship Pastor / Music Director</option>
+            <option>Youth / Student Pastor</option>
+            <option>Children's / Family Pastor</option>
             <option>Campus Pastor</option>
-            <option>Creative Director</option>
+            <option>Associate Pastor</option>
+            <option>Teaching Pastor</option>
+            <option>Creative / Media Director</option>
+            <option>Connections / Guest Experience</option>
+            <option>Operations / Admin Director</option>
+            <option>Discipleship / Groups Pastor</option>
+            <option>Production Director</option>
             <option>Communications Director</option>
-            <option>Operations Director</option>
+            <option>Multiple Positions</option>
             <option>Other</option>
           </select>
         </div>
+      </div>
+      <div class="field-row">
         <div>
           <label>Ideal Timeline</label>
           <select data-field="timeline">
