@@ -63,7 +63,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
 
 .ad-logo{height:60px;width:auto;display:block;align-self:flex-start;flex-shrink:0}
 .ad-logo-sm{height:46px;width:auto;display:block;align-self:flex-start;flex-shrink:0}
-.ad-logo-cream{height:54px;width:auto;display:block;filter:brightness(0);align-self:flex-start;flex-shrink:0}
+.ad-logo-cream{height:72px;width:auto;display:block;filter:brightness(0);align-self:flex-start;flex-shrink:0}
 .ad-logo-cream-sm{height:42px;width:auto;display:block;filter:brightness(0);align-self:flex-start;flex-shrink:0}
 
 .cta-arrow{display:inline-block;width:22px;height:14px;flex-shrink:0;vertical-align:middle}
@@ -98,6 +98,8 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
 #ad2 .ad-logo-strip{display:grid;grid-template-columns:1fr 1fr;gap:24px 32px;margin-top:14px}
 #ad2 .ad-logo-cell{display:flex;align-items:center;justify-content:center;height:140px;width:100%;padding:18px 24px;background:rgba(198,172,116,0.05);border:1px solid rgba(198,172,116,0.2)}
 #ad2 .ad-logo-cell img{max-height:100%;max-width:100%;width:auto;height:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:0.95}
+#ad2 .ad-logo-cell.union img{max-height:60%;max-width:75%}
+#ad2 .ad-logo-cell.lifechurch img{max-height:75%;max-width:88%}
 #ad2 .ad-bottom-row{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:16px}
 #ad2 .ad-meta{font-size:15px;text-transform:uppercase;letter-spacing:0.2em;color:rgba(255,255,255,0.55);font-weight:400}
 #ad2 .ad-cta{font-size:18px;padding:22px 36px}
@@ -124,7 +126,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
 #ad4 .split-bottom{position:absolute;top:50%;left:0;right:0;bottom:0;background:#0E0807;z-index:1}
 #ad4 .ad-content{padding:0;position:absolute;inset:0;z-index:3;display:block}
 #ad4 .ad-corner-eyebrow{position:absolute;top:80px;left:100px;font-size:18px;font-weight:500;text-transform:uppercase;letter-spacing:0.4em;color:#7E7C7A;z-index:4}
-#ad4 .ad-corner-logo{position:absolute;top:80px;right:100px;height:42px;width:auto;filter:brightness(0);z-index:4}
+#ad4 .ad-corner-logo{position:absolute;top:74px;right:100px;height:64px;width:auto;filter:brightness(0);z-index:4}
 #ad4 .ad-top-content{position:absolute;left:100px;right:100px;bottom:50%;padding-bottom:90px;color:#0E0807;z-index:3;display:flex;flex-direction:column;align-items:flex-start}
 #ad4 .ad-headline-top{font-size:148px;font-weight:700;text-transform:uppercase;letter-spacing:-8px;line-height:0.86;color:#0E0807}
 #ad4 .ad-bottom-content{position:absolute;left:100px;right:100px;top:50%;padding-top:90px;color:#fff;z-index:3;display:flex;flex-direction:column;align-items:flex-start}
@@ -289,7 +291,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
                 <div class="ad-headline">Too<br>Important.</div>
                 <div class="ad-headline-gold">For the wrong hire.</div>
                 <div class="gold-rule"></div>
-                <div class="ad-sub">Confidential pastoral search and ministry staffing. Trusted by churches of 1,000 and up.</div>
+                <div class="ad-sub">Confidential pastoral search and ministry staffing for medium to large churches.</div>
               </div>
               <div class="ad-cta-dark">Start Your Search <svg class="cta-arrow"><use href="#arrow"/></svg></div>
             </div>
@@ -323,13 +325,13 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
               </div>
               <div class="ad-logo-strip">
                 <div class="ad-logo-cell"><img src="/logos/potters-house.png"></div>
-                <div class="ad-logo-cell"><img src="/logos/lifechurch.svg"></div>
-                <div class="ad-logo-cell"><img src="/logos/union-church.png" style="filter:none"></div>
+                <div class="ad-logo-cell lifechurch"><img src="/logos/lifechurch.svg"></div>
+                <div class="ad-logo-cell union"><img src="/logos/union-church.png" style="filter:none"></div>
                 <div class="ad-logo-cell"><img src="/logos/transformation-church.png"></div>
               </div>
               <div class="ad-bottom-row">
-                <div class="ad-meta">Senior &middot; Executive &middot; Worship &middot; Youth</div>
-                <div class="ad-cta">Hire One39 <svg class="cta-arrow"><use href="#arrow"/></svg></div>
+                <div class="ad-meta">Senior pastors. Executive pastors. Ministry leaders.</div>
+                <div class="ad-cta">Find Your Next Pastor <svg class="cta-arrow"><use href="#arrow"/></svg></div>
               </div>
             </div>
           </div>
@@ -356,7 +358,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
             <div class="ad-content">
               <div>
                 <img src="/logos/one39.png" class="ad-logo">
-                <div class="ad-eyebrow">Search committee #11.</div>
+                <div class="ad-eyebrow">Pastoral search?</div>
                 <div class="ad-headline">Stop <em>the struggle.</em></div>
                 <div class="gold-rule"></div>
               </div>
@@ -693,8 +695,8 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
 var CAPTIONS = {
   ad1: "The wrong pastor doesn't show up on a resume.\n\nHe shows up six months later, when the staff starts leaving.\n\nWe help large churches avoid that. Confidential pastoral search and ministry staffing for congregations of 1,000 and up.\n\n👇 See how we'd run your search.",
   ad2: "The churches you respect aren't posting pastor jobs on Indeed.\n\nThey're making one phone call.\n\nWe place senior, executive, and ministry leaders for the names you know, and the next great church no one's heard of yet.\n\n👇 Make the call your peers already made.",
-  ad3: "Search committee meeting #11. Same three names. Same three doubts.\n\nThere's a faster way that doesn't sacrifice discernment. We handle the vetting, background checks, cultural fit, and confidentiality.\n\nYour committee handles the prayer.\n\n👇 We'll take meeting #12 off your calendar.",
-  ad4: "If your church doesn't look or feel like the suburban template, neither should the firm helping you hire.\n\nWe understand the dynamics of large Black church leadership. From associate pastors to executive directors. COGIC, NBC, AME, and the great non-denominational megachurches alike.\n\n👇 Talk to someone who already gets it.",
+  ad3: "Vetting a senior pastor is not a part-time job for a volunteer search committee.\n\nBackground checks. Cultural fit. Theological alignment. Reference calls. Confidentiality. We handle all of it so your committee can focus on the one thing only it can do: discernment.\n\n👇 Tell us where your search is stuck.",
+  ad4: "If your church doesn't look or feel like the suburban template, neither should the firm helping you hire.\n\nWe understand the dynamics of large church leadership, from associate pastors to executive directors. We've placed for ministries that lead thousands every Sunday.\n\n👇 Talk to someone who already gets it.",
   ad5: "Your ministry is too important to gamble on the wrong hire.\n\nConfidential pastoral search built for churches that take their leadership pipeline as seriously as they take their preaching.\n\n👇 Start a confidential conversation today.",
   ad6: "Looking for your next senior pastor?\n\nOr executive pastor. Or worship leader. Or youth director.\n\nWe find, vet, and place ministry leaders for churches that know the difference between a resume and a shepherd.\n\n👇 Tell us what your church needs.",
   ad7: "We can't tell you which church needed a senior pastor in 90 days.\n\nWe can't show you their search committee notes. We can't even put their logo on our website.\n\nThat's the point. And that's why they hired us.\n\n👇 We never tell. Tap to start a confidential search.",
