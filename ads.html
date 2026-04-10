@@ -9,111 +9,183 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothing:antialiased;background:#1a1a1a;color:#fff;min-height:100vh}
-.page{max-width:1240px;margin:0 auto;padding:60px 24px 120px}
+.page{max-width:1280px;margin:0 auto;padding:60px 24px 120px}
 .page-head{margin-bottom:48px;text-align:center}
-.page-head h1{font-size:38px;font-weight:700;letter-spacing:-1px;text-transform:uppercase;margin-bottom:14px}
+.page-head h1{font-size:42px;font-weight:700;letter-spacing:-1px;text-transform:uppercase;margin-bottom:14px}
 .page-head h1 em{font-style:normal;color:#C6AC74}
-.page-head p{font-size:15px;color:rgba(255,255,255,0.55);max-width:560px;margin:0 auto;line-height:1.6}
-.page-head .hint{margin-top:20px;font-size:13px;color:rgba(255,255,255,0.4)}
-.page-head .hint kbd{display:inline-block;background:#2a2a2a;border:1px solid #333;padding:3px 8px;border-radius:4px;font-family:monospace;font-size:11px;color:#C6AC74}
+.page-head p{font-size:15px;color:rgba(255,255,255,0.6);max-width:640px;margin:0 auto 8px;line-height:1.6}
+.page-head .hint{margin-top:14px;font-size:12px;color:rgba(255,255,255,0.4)}
+.section-divider{margin:80px 0 40px;text-align:center;position:relative}
+.section-divider::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,0.08)}
+.section-divider span{position:relative;background:#1a1a1a;padding:0 28px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.25em;color:#C6AC74}
 
-.ad-section{margin-bottom:80px}
-.ad-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding:0 4px}
-.ad-label .meta{display:flex;align-items:center;gap:14px}
+.ad-section{margin-bottom:64px}
+.ad-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding:0 4px;flex-wrap:wrap;gap:12px}
+.ad-label .meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .ad-label .num{font-size:11px;font-weight:700;color:#C6AC74;text-transform:uppercase;letter-spacing:0.15em}
-.ad-label .dims{font-size:12px;color:rgba(255,255,255,0.5);font-family:monospace}
+.ad-label .dims{font-size:11px;color:rgba(255,255,255,0.45);font-family:monospace}
 .ad-label .desc{font-size:13px;color:rgba(255,255,255,0.7)}
-.btn-download{background:#C6AC74;color:#0E0807;border:none;padding:10px 22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;border-radius:0;transition:all 0.2s ease}
+.btn-download{background:#C6AC74;color:#0E0807;border:none;padding:11px 22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;border-radius:0;transition:all 0.2s ease;white-space:nowrap}
 .btn-download:hover{background:#fff}
 .btn-download:disabled{opacity:0.5;cursor:wait}
 
-.ad-frame-wrap{display:inline-block;position:relative}
-.ad-frame{position:relative;background:#0E0807;color:#fff;font-family:'Helvetica Neue',Helvetica,sans-serif;overflow:hidden}
-.ad-frame.size-square{width:1080px;height:1080px}
-.ad-frame.size-vertical{width:1080px;height:1350px}
-.ad-frame.size-story{width:1080px;height:1920px}
+/* Caption box */
+.caption-box{margin-top:18px;background:#0a0a0a;border:1px solid rgba(255,255,255,0.08);padding:24px;max-width:900px}
+.caption-box-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px}
+.caption-box-label{font-size:10px;font-weight:700;color:#C6AC74;text-transform:uppercase;letter-spacing:0.2em}
+.btn-copy{background:transparent;color:#C6AC74;border:1px solid #C6AC74;padding:8px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s ease;white-space:nowrap}
+.btn-copy:hover{background:#C6AC74;color:#0E0807}
+.caption-text{font-size:14px;line-height:1.65;color:rgba(255,255,255,0.85);font-family:'Helvetica Neue',Helvetica,sans-serif;white-space:pre-wrap}
 
-/* Scale large ads to fit screen via CSS transform — purely visual; html2canvas reads native size */
-.ad-scale-50{transform:scale(0.5);transform-origin:top left}
-.ad-scale-40{transform:scale(0.4);transform-origin:top left}
-.ad-frame-wrap.scaled-50{width:540px;height:540px}
-.ad-frame-wrap.scaled-50.vertical{width:540px;height:675px}
-.ad-frame-wrap.scaled-40{width:432px;height:768px}
+/* Preview wrapper — visually scales the ad down without transforming the ad node directly.
+   We use a clipping container + transform on an inner wrapper. The actual .ad-frame stays at native size.
+   On download, we CLONE the ad node into a hidden full-size container so html2canvas sees a clean,
+   transform-free element. */
+.preview{display:inline-block;background:#0a0a0a;overflow:hidden;border:1px solid rgba(255,255,255,0.06)}
+.preview-inner{transform-origin:top left}
+.preview.square{width:540px;height:540px}
+.preview.square .preview-inner{width:1080px;height:1080px;transform:scale(0.5)}
+.preview.vertical{width:540px;height:675px}
+.preview.vertical .preview-inner{width:1080px;height:1350px;transform:scale(0.5)}
+.preview.story{width:432px;height:768px}
+.preview.story .preview-inner{width:1080px;height:1920px;transform:scale(0.4)}
+
+/* Ad frame base */
+.ad-frame{position:relative;background:#0E0807;color:#fff;font-family:'Helvetica Neue',Helvetica,sans-serif;overflow:hidden;width:100%;height:100%}
+.size-square{width:1080px;height:1080px}
+.size-vertical{width:1080px;height:1350px}
+.size-story{width:1080px;height:1920px}
+
+/* Hidden capture container — used during download to render the ad at native size */
+#capture-stage{position:fixed;top:0;left:-10000px;pointer-events:none;opacity:1}
 
 /* ============================================
-   AD STYLING — shared
+   SHARED AD STYLING
    ============================================ */
-.ad-bg-image{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0.22;filter:grayscale(100%) contrast(1.1)}
-.ad-bg-overlay{position:absolute;inset:0;background:radial-gradient(circle at 30% 40%, rgba(198,172,116,0.08) 0%, rgba(14,8,7,0) 60%)}
-.ad-content{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;padding:80px}
-.ad-logo{height:48px;width:auto}
-.ad-kicker{font-size:22px;font-weight:400;text-transform:uppercase;letter-spacing:0.45em;color:#C6AC74}
-.ad-headline{font-size:108px;font-weight:700;text-transform:uppercase;letter-spacing:-5px;line-height:0.92;color:#fff}
+.ad-bg-image{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0.18;filter:grayscale(100%) contrast(1.1)}
+.ad-bg-overlay{position:absolute;inset:0;background:radial-gradient(circle at 25% 30%, rgba(198,172,116,0.06) 0%, rgba(14,8,7,0) 65%)}
+.ad-content{position:relative;z-index:2;height:100%;display:flex;flex-direction:column}
+.ad-logo{height:54px;width:auto;display:block}
+.ad-logo-sm{height:40px;width:auto;display:block}
+.ad-kicker{font-size:22px;font-weight:400;text-transform:uppercase;letter-spacing:0.4em;color:#C6AC74}
+.ad-headline{font-weight:700;text-transform:uppercase;line-height:0.9;color:#fff}
 .ad-headline em{font-style:normal;color:#C6AC74}
-.ad-sub{font-size:30px;font-weight:300;line-height:1.45;color:rgba(255,255,255,0.72)}
-.ad-cta{display:inline-flex;align-items:center;gap:14px;font-size:22px;font-weight:700;text-transform:uppercase;letter-spacing:0.16em;color:#0E0807;background:#C6AC74;padding:24px 40px;align-self:flex-start}
-.ad-cta-arrow{font-size:24px}
-.ad-divider{width:80px;height:3px;background:#C6AC74}
-
-.ad-logo-row{display:flex;align-items:center;gap:48px;flex-wrap:wrap}
-.ad-logo-row img{height:64px;width:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85}
-.ad-logo-row img.no-invert{filter:none}
+.ad-sub{font-weight:300;line-height:1.5;color:rgba(255,255,255,0.7)}
+.ad-cta{display:inline-flex;align-items:center;gap:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:#0E0807;background:#C6AC74}
+.ad-cta-arrow{font-weight:400}
+.ad-divider-gold{width:80px;height:3px;background:#C6AC74}
 
 /* ============================================
-   AD 1: Square — TOO IMPORTANT
+   AD 01: Square — TOO IMPORTANT
    ============================================ */
-#ad1 .ad-content{justify-content:space-between}
-#ad1 .ad-top{display:flex;flex-direction:column;gap:32px}
-#ad1 .ad-headline{font-size:128px;letter-spacing:-7px;line-height:0.88}
-#ad1 .ad-headline-block{margin-top:60px}
-#ad1 .ad-bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:40px}
+#ad1 .ad-content{padding:90px;justify-content:space-between}
+#ad1 .ad-headline{font-size:118px;letter-spacing:-6px}
+#ad1 .ad-sub{font-size:28px;margin-bottom:8px}
+#ad1 .ad-cta{font-size:20px;padding:22px 36px;align-self:flex-start}
 
 /* ============================================
-   AD 2: Square — TRUSTED BY
+   AD 02: Square — TRUSTED BY
    ============================================ */
-#ad2 .ad-content{justify-content:space-between;padding:90px 80px}
-#ad2 .ad-headline{font-size:96px;letter-spacing:-4px;line-height:0.95}
-#ad2 .ad-mid{display:flex;flex-direction:column;gap:48px}
-#ad2 .ad-logo-strip{display:grid;grid-template-columns:1fr 1fr;gap:60px 80px;align-items:center;margin-top:20px}
-#ad2 .ad-logo-strip img{height:80px;width:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:0.9}
-#ad2 .ad-bottom{display:flex;align-items:center;justify-content:space-between;gap:40px}
+#ad2 .ad-content{padding:96px;justify-content:space-between}
+#ad2 .ad-headline{font-size:96px;letter-spacing:-4px}
+#ad2 .ad-logo-strip{display:grid;grid-template-columns:1fr 1fr;gap:50px 70px;align-items:center;justify-items:center;margin-top:8px}
+#ad2 .ad-logo-strip img{height:78px;width:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:0.92}
+#ad2 .ad-cta{font-size:20px;padding:22px 36px;align-self:flex-start}
 
 /* ============================================
-   AD 3: Vertical — STOP THE STRUGGLE
+   AD 03: Vertical — STOP THE STRUGGLE
    ============================================ */
-#ad3 .ad-content{justify-content:space-between;padding:100px 90px}
-#ad3 .ad-headline{font-size:140px;letter-spacing:-7px;line-height:0.88}
-#ad3 .ad-headline em{display:block}
-#ad3 .ad-mid{display:flex;flex-direction:column;gap:44px;margin-top:50px}
-#ad3 .ad-bullets{display:flex;flex-direction:column;gap:18px;font-size:30px;font-weight:300;color:rgba(255,255,255,0.78);line-height:1.5}
-#ad3 .ad-bullets div{display:flex;align-items:center;gap:18px}
-#ad3 .ad-bullets div::before{content:'';display:block;width:14px;height:14px;background:#C6AC74;border-radius:50%;flex-shrink:0}
+#ad3 .ad-content{padding:110px 96px;justify-content:space-between}
+#ad3 .ad-headline{font-size:142px;letter-spacing:-7px;margin-top:36px}
+#ad3 .ad-bullets{display:flex;flex-direction:column;gap:24px;margin-top:24px}
+#ad3 .ad-bullets div{display:flex;align-items:center;gap:22px;font-size:32px;font-weight:300;color:rgba(255,255,255,0.82);line-height:1.3}
+#ad3 .ad-bullets div::before{content:'';display:block;width:16px;height:16px;background:#C6AC74;border-radius:50%;flex-shrink:0}
+#ad3 .ad-cta{font-size:22px;padding:24px 38px;align-self:flex-start}
 
 /* ============================================
-   AD 4: Vertical — BUILT FOR YOUR CHURCH
+   AD 04: Vertical — BUILT FOR YOUR CHURCH
    ============================================ */
-#ad4 .ad-content{justify-content:space-between;padding:100px 90px}
-#ad4 .ad-headline{font-size:130px;letter-spacing:-6px;line-height:0.9}
-#ad4 .ad-mid{display:flex;flex-direction:column;gap:48px;margin-top:60px}
-#ad4 .ad-sub{font-size:34px}
+#ad4 .ad-content{padding:110px 96px;justify-content:space-between}
+#ad4 .ad-headline{font-size:124px;letter-spacing:-6px;margin-top:36px}
+#ad4 .ad-sub{font-size:32px;margin-top:36px}
+#ad4 .ad-cta{font-size:22px;padding:24px 38px;align-self:flex-start}
 
 /* ============================================
-   AD 5: Story — MASSIVE TYPE
+   AD 05: Story — TOO IMPORTANT (massive)
    ============================================ */
-#ad5 .ad-content{padding:140px 100px;justify-content:space-between}
-#ad5 .ad-headline{font-size:180px;letter-spacing:-9px;line-height:0.86}
-#ad5 .ad-mid{margin-top:80px}
-#ad5 .ad-sub{font-size:38px;margin-top:60px}
+#ad5 .ad-content{padding:160px 110px;justify-content:space-between}
+#ad5 .ad-headline{font-size:172px;letter-spacing:-9px;margin-top:90px}
+#ad5 .ad-sub{font-size:36px;margin-top:60px}
+#ad5 .ad-cta{font-size:24px;padding:28px 44px;align-self:flex-start}
 
 /* ============================================
-   AD 6: Story — QUESTION HOOK
+   AD 06: Story — LOOKING FOR
    ============================================ */
-#ad6 .ad-content{padding:140px 100px;justify-content:space-between}
-#ad6 .ad-kicker{font-size:32px;letter-spacing:0.4em}
-#ad6 .ad-headline{font-size:200px;letter-spacing:-10px;line-height:0.85}
-#ad6 .ad-headline em{display:block}
-#ad6 .ad-mid{margin-top:80px;display:flex;flex-direction:column;gap:60px}
-#ad6 .ad-sub{font-size:40px}
+#ad6 .ad-content{padding:160px 110px;justify-content:space-between}
+#ad6 .ad-kicker{font-size:32px;letter-spacing:0.35em}
+#ad6 .ad-headline{font-size:200px;letter-spacing:-10px;margin-top:50px;line-height:0.85}
+#ad6 .ad-sub{font-size:38px;margin-top:60px}
+#ad6 .ad-cta{font-size:24px;padding:28px 44px;align-self:flex-start}
+
+/* ============================================
+   AD 07: Square — REDACTED / NDA (clever)
+   ============================================ */
+#ad7 .ad-content{padding:96px;justify-content:space-between}
+#ad7 .ad-headline{font-size:84px;letter-spacing:-3px;line-height:0.95}
+#ad7 .redacted{display:inline-block;background:#fff;color:transparent;border-radius:2px;padding:0 2px;letter-spacing:0;user-select:none}
+#ad7 .ad-quote{font-size:34px;font-weight:300;line-height:1.45;color:rgba(255,255,255,0.85);margin-top:50px;font-style:italic}
+#ad7 .ad-quote .redacted{font-size:34px}
+#ad7 .ad-attribution{font-size:18px;color:rgba(255,255,255,0.4);margin-top:24px;text-transform:uppercase;letter-spacing:0.2em}
+#ad7 .ad-cta{font-size:20px;padding:22px 36px;align-self:flex-start;margin-top:40px}
+
+/* ============================================
+   AD 08: Vertical — WE'VE SEEN THIS MOVIE (insider knowledge)
+   ============================================ */
+#ad8 .ad-content{padding:110px 96px;justify-content:space-between}
+#ad8 .ad-headline{font-size:108px;letter-spacing:-5px;margin-top:32px}
+#ad8 .ad-scenarios{display:flex;flex-direction:column;gap:40px;margin-top:40px}
+#ad8 .ad-scenario{font-size:30px;font-weight:300;color:rgba(255,255,255,0.78);line-height:1.45;font-style:italic;border-left:4px solid #C6AC74;padding-left:32px}
+#ad8 .ad-cta{font-size:22px;padding:24px 38px;align-self:flex-start}
+
+/* ============================================
+   AD 09: Square — DON'T CALL US (Patagonia move)
+   ============================================ */
+#ad9 .ad-content{padding:100px;justify-content:space-between}
+#ad9 .ad-headline{font-size:124px;letter-spacing:-6px}
+#ad9 .ad-headline em{display:block}
+#ad9 .ad-sub{font-size:30px;margin-top:0}
+#ad9 .ad-cta{font-size:20px;padding:22px 36px;align-self:flex-start}
+
+/* ============================================
+   AD 10: Story — SUNDAY IS COMING (Lockridge reference)
+   ============================================ */
+#ad10 .ad-content{padding:180px 110px;justify-content:space-between;align-items:flex-start}
+#ad10 .ad-stack{display:flex;flex-direction:column;gap:60px}
+#ad10 .ad-line{font-size:160px;font-weight:700;text-transform:uppercase;letter-spacing:-8px;line-height:0.9;color:#fff}
+#ad10 .ad-line.gold{color:#C6AC74}
+#ad10 .ad-attribution{font-size:24px;color:rgba(255,255,255,0.45);font-style:italic;margin-top:80px;font-weight:300}
+#ad10 .ad-cta{font-size:24px;padding:28px 44px;align-self:flex-start}
+
+/* ============================================
+   AD 11: Vertical — JEREMIAH 3:15 (Bible verse fluency)
+   ============================================ */
+#ad11 .ad-content{padding:110px 96px;justify-content:space-between}
+#ad11 .ad-verse{font-size:48px;font-weight:300;font-style:italic;line-height:1.3;color:rgba(255,255,255,0.92);margin-top:60px}
+#ad11 .ad-verse-ref{font-size:20px;color:#C6AC74;text-transform:uppercase;letter-spacing:0.2em;margin-top:32px}
+#ad11 .ad-headline{font-size:84px;letter-spacing:-4px;margin-top:auto}
+#ad11 .ad-headline em{font-style:normal;color:#C6AC74;display:block}
+#ad11 .ad-cta{font-size:22px;padding:24px 38px;align-self:flex-start;margin-top:36px}
+
+/* ============================================
+   AD 12: Square — THE FUNNEL / NUMBERS
+   ============================================ */
+#ad12 .ad-content{padding:90px;justify-content:space-between}
+#ad12 .ad-headline{font-size:84px;letter-spacing:-3px;line-height:0.95}
+#ad12 .ad-numbers{display:flex;flex-direction:column;gap:18px;margin-top:36px}
+#ad12 .ad-number-row{display:flex;align-items:baseline;gap:24px;font-weight:300}
+#ad12 .ad-num{font-size:56px;font-weight:700;color:#C6AC74;font-feature-settings:'tnum';min-width:120px;text-align:right}
+#ad12 .ad-num-label{font-size:24px;color:rgba(255,255,255,0.7);font-weight:300}
+#ad12 .ad-cta{font-size:20px;padding:22px 36px;align-self:flex-start}
 
 </style>
 </head>
@@ -123,35 +195,39 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
 
   <div class="page-head">
     <h1>One39 <em>PPC Ads</em></h1>
-    <p>6 punchy creatives across 3 Meta sizes. Click <strong>DOWNLOAD PNG</strong> on any ad to save it at native resolution (2x retina). All ads use the live brand assets and are editable in <code>ads.html</code>.</p>
-    <p class="hint">Tip: All downloads save as <kbd>one39-ad-N.png</kbd> in your Downloads folder.</p>
+    <p>12 ad creatives across 3 Meta sizes. Click <strong>DOWNLOAD PNG</strong> on any ad to save it at native resolution (2x retina).</p>
+    <p class="hint">Ads 01–06 are brand-aligned hero plays. Ads 07–12 are clever, research-backed creative concepts (insider voice, subversion, cultural references).</p>
   </div>
 
-  <!-- ================ AD 1: Square — TOO IMPORTANT ================ -->
+  <!-- =============================================================
+       SECTION A: BRAND-ALIGNED HERO PLAYS
+       ============================================================= -->
+  <div class="section-divider"><span>Section A · Brand Hero Plays</span></div>
+
+  <!-- AD 01 -->
   <div class="ad-section">
     <div class="ad-label">
       <div class="meta">
         <span class="num">Ad 01</span>
-        <span class="dims">1080 × 1080 · Feed Square</span>
-        <span class="desc">Brand-aligned hero. Matches landing page headline.</span>
+        <span class="dims">1080 × 1080 · Square</span>
+        <span class="desc">"Too Important" — matches landing page headline.</span>
       </div>
       <button class="btn-download" data-target="ad1" data-name="one39-ad-01-square-too-important">Download PNG</button>
     </div>
-    <div class="ad-frame-wrap scaled-50">
-      <div class="ad-scale-50">
+    <div class="preview square">
+      <div class="preview-inner">
         <div class="ad-frame size-square" id="ad1">
-          <div class="ad-bg-image" style="background-image:url('https://images.unsplash.com/photo-1600288480699-0b0d8a456dd8?w=1920&q=80')"></div>
           <div class="ad-bg-overlay"></div>
           <div class="ad-content">
-            <div class="ad-top">
-              <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" class="ad-logo" crossorigin="anonymous">
-              <div class="ad-kicker">Pastoral vacancy?</div>
-              <div class="ad-headline-block">
-                <div class="ad-headline">Your ministry is <em>too important</em> for the wrong hire.</div>
-              </div>
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
             </div>
-            <div class="ad-bottom">
+            <div>
+              <div class="ad-headline">Your ministry is <em>too important</em> for the wrong hire.</div>
+            </div>
+            <div>
               <div class="ad-sub">Confidential pastoral search.<br>Trusted by churches of 1,000+.</div>
+              <div style="height:24px"></div>
               <div class="ad-cta">Free Consultation <span class="ad-cta-arrow">→</span></div>
             </div>
           </div>
@@ -160,115 +236,104 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
     </div>
   </div>
 
-  <!-- ================ AD 2: Square — TRUSTED BY ================ -->
+  <!-- AD 02 -->
   <div class="ad-section">
     <div class="ad-label">
       <div class="meta">
         <span class="num">Ad 02</span>
-        <span class="dims">1080 × 1080 · Feed Square</span>
-        <span class="desc">Social proof. Real partner logos.</span>
+        <span class="dims">1080 × 1080 · Square</span>
+        <span class="desc">Social proof — real partner logos.</span>
       </div>
       <button class="btn-download" data-target="ad2" data-name="one39-ad-02-square-trusted-by">Download PNG</button>
     </div>
-    <div class="ad-frame-wrap scaled-50">
-      <div class="ad-scale-50">
+    <div class="preview square">
+      <div class="preview-inner">
         <div class="ad-frame size-square" id="ad2">
           <div class="ad-bg-overlay"></div>
           <div class="ad-content">
-            <div class="ad-top">
-              <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" class="ad-logo" crossorigin="anonymous">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
+              <div class="ad-kicker" style="margin-top:36px">Trusted by</div>
+              <div class="ad-headline" style="margin-top:18px">The churches <em>you trust.</em></div>
             </div>
-            <div class="ad-mid">
-              <div class="ad-kicker">Trusted by</div>
-              <div class="ad-headline">The churches <em>you trust.</em></div>
-              <div class="ad-logo-strip">
-                <img src="https://payments.thepottershouse.org/wp-content/uploads/2025/06/tph_logo_full_blk.png" crossorigin="anonymous">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/8/85/Life.Church_logo.svg" crossorigin="anonymous">
-                <img src="https://theunionchurch.com/wp-content/uploads/2021/03/UnionChurch-Logo-White.png" style="filter:none" crossorigin="anonymous">
-                <img src="https://transformchurch.us/wp-content/uploads/2014/11/main.png" crossorigin="anonymous">
-              </div>
+            <div class="ad-logo-strip">
+              <img src="/logos/potters-house.png">
+              <img src="/logos/lifechurch.svg">
+              <img src="/logos/union-church.png" style="filter:none">
+              <img src="/logos/transformation-church.png">
             </div>
-            <div class="ad-bottom">
-              <div class="ad-sub">Senior, executive &amp;<br>ministry leaders placed.</div>
-              <div class="ad-cta">Hire.One39.co <span class="ad-cta-arrow">→</span></div>
-            </div>
+            <div class="ad-cta">Hire.One39.co <span class="ad-cta-arrow">→</span></div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ================ AD 3: Vertical — STOP THE STRUGGLE ================ -->
+  <!-- AD 03 -->
   <div class="ad-section">
     <div class="ad-label">
       <div class="meta">
         <span class="num">Ad 03</span>
-        <span class="dims">1080 × 1350 · Feed Vertical (4:5)</span>
-        <span class="desc">Pain hook for search committees.</span>
+        <span class="dims">1080 × 1350 · Vertical (4:5)</span>
+        <span class="desc">Search-committee pain hook.</span>
       </div>
       <button class="btn-download" data-target="ad3" data-name="one39-ad-03-vertical-search-committee">Download PNG</button>
     </div>
-    <div class="ad-frame-wrap scaled-50 vertical">
-      <div class="ad-scale-50">
+    <div class="preview vertical">
+      <div class="preview-inner">
         <div class="ad-frame size-vertical" id="ad3">
           <div class="ad-bg-overlay"></div>
           <div class="ad-content">
-            <div class="ad-top">
-              <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" class="ad-logo" crossorigin="anonymous">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
               <div class="ad-kicker" style="margin-top:50px">Search committee stuck?</div>
-              <div class="ad-headline" style="margin-top:30px">Stop the <em>struggle.</em></div>
+              <div class="ad-headline">Stop the <em>struggle.</em></div>
             </div>
-            <div class="ad-mid">
-              <div class="ad-bullets">
-                <div>Vetting &amp; background checks</div>
-                <div>Cultural &amp; ministry fit</div>
-                <div>Total confidentiality</div>
-                <div>12-month guarantee</div>
-              </div>
+            <div class="ad-bullets">
+              <div>Vetting &amp; background checks</div>
+              <div>Cultural &amp; ministry fit</div>
+              <div>Total confidentiality</div>
+              <div>12-month guarantee</div>
             </div>
-            <div class="ad-bottom" style="display:flex;justify-content:flex-start">
-              <div class="ad-cta">Get Started <span class="ad-cta-arrow">→</span></div>
-            </div>
+            <div class="ad-cta">Get Started <span class="ad-cta-arrow">→</span></div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ================ AD 4: Vertical — BUILT FOR YOUR CHURCH ================ -->
+  <!-- AD 04 -->
   <div class="ad-section">
     <div class="ad-label">
       <div class="meta">
         <span class="num">Ad 04</span>
-        <span class="dims">1080 × 1350 · Feed Vertical (4:5)</span>
+        <span class="dims">1080 × 1350 · Vertical (4:5)</span>
         <span class="desc">Cultural specificity, identity-first.</span>
       </div>
       <button class="btn-download" data-target="ad4" data-name="one39-ad-04-vertical-built-for">Download PNG</button>
     </div>
-    <div class="ad-frame-wrap scaled-50 vertical">
-      <div class="ad-scale-50">
+    <div class="preview vertical">
+      <div class="preview-inner">
         <div class="ad-frame size-vertical" id="ad4">
-          <div class="ad-bg-image" style="background-image:url('https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1920&q=80');opacity:0.18"></div>
           <div class="ad-bg-overlay"></div>
           <div class="ad-content">
-            <div class="ad-top">
-              <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" class="ad-logo" crossorigin="anonymous">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
               <div class="ad-kicker" style="margin-top:50px">Church staffing, done right</div>
-              <div class="ad-headline" style="margin-top:30px">Built for <em>your church.</em></div>
+              <div class="ad-headline">Built for <em>your church.</em></div>
             </div>
-            <div class="ad-mid">
-              <div class="ad-sub">Your church isn't generic.<br>Your staffing partner shouldn't be either.<br><br>One39 places senior, executive &amp; ministry leaders for medium-to-large churches.</div>
+            <div>
+              <div class="ad-sub">Your church isn't generic.<br>Your staffing partner shouldn't be either.</div>
+              <div class="ad-sub" style="margin-top:24px">One39 places senior, executive &amp; ministry leaders for medium-to-large churches.</div>
             </div>
-            <div class="ad-bottom" style="display:flex;justify-content:flex-start">
-              <div class="ad-cta">Talk to Our Team <span class="ad-cta-arrow">→</span></div>
-            </div>
+            <div class="ad-cta">Talk to Our Team <span class="ad-cta-arrow">→</span></div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ================ AD 5: Story — MASSIVE TYPE ================ -->
+  <!-- AD 05 -->
   <div class="ad-section">
     <div class="ad-label">
       <div class="meta">
@@ -278,30 +343,27 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
       </div>
       <button class="btn-download" data-target="ad5" data-name="one39-ad-05-story-too-important">Download PNG</button>
     </div>
-    <div class="ad-frame-wrap scaled-40">
-      <div class="ad-scale-40">
+    <div class="preview story">
+      <div class="preview-inner">
         <div class="ad-frame size-story" id="ad5">
-          <div class="ad-bg-image" style="background-image:url('https://images.unsplash.com/photo-1600288480699-0b0d8a456dd8?w=1920&q=80')"></div>
           <div class="ad-bg-overlay"></div>
           <div class="ad-content">
-            <div class="ad-top">
-              <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" class="ad-logo" crossorigin="anonymous">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
             </div>
-            <div class="ad-mid">
+            <div>
               <div class="ad-kicker">Pastoral vacancy?</div>
-              <div class="ad-headline" style="margin-top:60px">Your ministry is <em>too important</em> for the wrong hire.</div>
+              <div class="ad-headline">Your ministry is <em>too important</em> for the wrong hire.</div>
               <div class="ad-sub">Confidential pastoral search<br>for medium-to-large churches.</div>
             </div>
-            <div class="ad-bottom">
-              <div class="ad-cta">Hire.One39.co <span class="ad-cta-arrow">→</span></div>
-            </div>
+            <div class="ad-cta">Hire.One39.co <span class="ad-cta-arrow">→</span></div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ================ AD 6: Story — QUESTION HOOK ================ -->
+  <!-- AD 06 -->
   <div class="ad-section">
     <div class="ad-label">
       <div class="meta">
@@ -311,22 +373,213 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
       </div>
       <button class="btn-download" data-target="ad6" data-name="one39-ad-06-story-looking-for">Download PNG</button>
     </div>
-    <div class="ad-frame-wrap scaled-40">
-      <div class="ad-scale-40">
+    <div class="preview story">
+      <div class="preview-inner">
         <div class="ad-frame size-story" id="ad6">
           <div class="ad-bg-overlay"></div>
           <div class="ad-content">
-            <div class="ad-top">
-              <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" class="ad-logo" crossorigin="anonymous">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
             </div>
-            <div class="ad-mid">
+            <div>
               <div class="ad-kicker">Looking for your next</div>
               <div class="ad-headline">Senior <em>pastor?</em></div>
               <div class="ad-sub">We find, vet, and place ministry leaders for churches that take their hiring seriously.</div>
             </div>
-            <div class="ad-bottom">
-              <div class="ad-cta">Free Consultation <span class="ad-cta-arrow">→</span></div>
+            <div class="ad-cta">Free Consultation <span class="ad-cta-arrow">→</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================================================
+       SECTION B: CLEVER / RESEARCH-BACKED CONCEPTS
+       ============================================================= -->
+  <div class="section-divider"><span>Section B · Clever Concepts</span></div>
+
+  <!-- AD 07 — Redacted NDA -->
+  <div class="ad-section">
+    <div class="ad-label">
+      <div class="meta">
+        <span class="num">Ad 07</span>
+        <span class="dims">1080 × 1080 · Square</span>
+        <span class="desc">"This search never happened" — confidentiality as the headline.</span>
+      </div>
+      <button class="btn-download" data-target="ad7" data-name="one39-ad-07-square-redacted">Download PNG</button>
+    </div>
+    <div class="preview square">
+      <div class="preview-inner">
+        <div class="ad-frame size-square" id="ad7">
+          <div class="ad-content">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo-sm">
+              <div class="ad-quote" style="margin-top:54px">
+                "<span class="redacted">&nbsp;Mount Calvary AME&nbsp;</span> needed a senior pastor in 90 days. We can't tell you who they are. We can tell you he's preaching this Sunday."
+              </div>
+              <div class="ad-attribution">— Confidential Search · 2025</div>
             </div>
+            <div>
+              <div class="ad-headline">Confidentiality is <em>the job.</em></div>
+              <div style="height:32px"></div>
+              <div class="ad-cta">Hire.One39.co <span class="ad-cta-arrow">→</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AD 08 — We've seen this movie -->
+  <div class="ad-section">
+    <div class="ad-label">
+      <div class="meta">
+        <span class="num">Ad 08</span>
+        <span class="dims">1080 × 1350 · Vertical (4:5)</span>
+        <span class="desc">Insider scenarios — signals deep cultural fluency.</span>
+      </div>
+      <button class="btn-download" data-target="ad8" data-name="one39-ad-08-vertical-seen-movie">Download PNG</button>
+    </div>
+    <div class="preview vertical">
+      <div class="preview-inner">
+        <div class="ad-frame size-vertical" id="ad8">
+          <div class="ad-content">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
+              <div class="ad-headline">We've seen <em>this movie.</em></div>
+            </div>
+            <div class="ad-scenarios">
+              <div class="ad-scenario">"He's charismatic on the platform but the staff is scared of him."</div>
+              <div class="ad-scenario">"The founder's son feels called but the elders don't feel peace."</div>
+              <div class="ad-scenario">"Your worship leader is preaching more than the pastor."</div>
+            </div>
+            <div>
+              <div class="ad-sub" style="font-size:28px;margin-bottom:28px">We've placed around it. Let's talk.</div>
+              <div class="ad-cta">Schedule a Call <span class="ad-cta-arrow">→</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AD 09 — Don't Call Us -->
+  <div class="ad-section">
+    <div class="ad-label">
+      <div class="meta">
+        <span class="num">Ad 09</span>
+        <span class="dims">1080 × 1080 · Square</span>
+        <span class="desc">Reverse psychology (Patagonia "Don't Buy This Jacket" move).</span>
+      </div>
+      <button class="btn-download" data-target="ad9" data-name="one39-ad-09-square-dont-call">Download PNG</button>
+    </div>
+    <div class="preview square">
+      <div class="preview-inner">
+        <div class="ad-frame size-square" id="ad9">
+          <div class="ad-bg-overlay"></div>
+          <div class="ad-content">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
+            </div>
+            <div>
+              <div class="ad-headline">Don't <em>call us.</em></div>
+              <div class="ad-sub" style="margin-top:32px">Not if your senior pastor resigned this Sunday and the board is panicking.<br><br>Call us in 30 days — once everyone has caught their breath.</div>
+            </div>
+            <div class="ad-cta">When You're Ready <span class="ad-cta-arrow">→</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AD 10 — Sunday is Coming -->
+  <div class="ad-section">
+    <div class="ad-label">
+      <div class="meta">
+        <span class="num">Ad 10</span>
+        <span class="dims">1080 × 1920 · Story / Reel (9:16)</span>
+        <span class="desc">S.M. Lockridge homage. Massive type. Insider reference.</span>
+      </div>
+      <button class="btn-download" data-target="ad10" data-name="one39-ad-10-story-sundays-coming">Download PNG</button>
+    </div>
+    <div class="preview story">
+      <div class="preview-inner">
+        <div class="ad-frame size-story" id="ad10">
+          <div class="ad-content">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
+            </div>
+            <div class="ad-stack">
+              <div class="ad-line">It's Friday.</div>
+              <div class="ad-line gold">Sunday's coming.</div>
+              <div class="ad-line" style="font-size:80px;letter-spacing:-3px">Who's preaching?</div>
+            </div>
+            <div>
+              <div class="ad-attribution">One39 finds, vets &amp; places senior pastors.</div>
+              <div style="height:32px"></div>
+              <div class="ad-cta">Hire.One39.co <span class="ad-cta-arrow">→</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AD 11 — Jeremiah 3:15 -->
+  <div class="ad-section">
+    <div class="ad-label">
+      <div class="meta">
+        <span class="num">Ad 11</span>
+        <span class="dims">1080 × 1350 · Vertical (4:5)</span>
+        <span class="desc">"The search committee verse" — instant biblical fluency.</span>
+      </div>
+      <button class="btn-download" data-target="ad11" data-name="one39-ad-11-vertical-jeremiah">Download PNG</button>
+    </div>
+    <div class="preview vertical">
+      <div class="preview-inner">
+        <div class="ad-frame size-vertical" id="ad11">
+          <div class="ad-content">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo">
+              <div class="ad-verse">"And I will give you pastors according to mine heart, which shall feed you with knowledge and understanding."</div>
+              <div class="ad-verse-ref">— Jeremiah 3:15 (KJV)</div>
+            </div>
+            <div>
+              <div class="ad-headline">That's <em>our brief.</em></div>
+              <div class="ad-cta">Start Your Search <span class="ad-cta-arrow">→</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AD 12 — The Funnel -->
+  <div class="ad-section">
+    <div class="ad-label">
+      <div class="meta">
+        <span class="num">Ad 12</span>
+        <span class="dims">1080 × 1080 · Square</span>
+        <span class="desc">Visualizes the work behind every placement.</span>
+      </div>
+      <button class="btn-download" data-target="ad12" data-name="one39-ad-12-square-funnel">Download PNG</button>
+    </div>
+    <div class="preview square">
+      <div class="preview-inner">
+        <div class="ad-frame size-square" id="ad12">
+          <div class="ad-content">
+            <div>
+              <img src="/logos/one39.png" class="ad-logo-sm">
+              <div class="ad-headline" style="margin-top:36px">One placement.<br><em>200 conversations.</em></div>
+            </div>
+            <div class="ad-numbers">
+              <div class="ad-number-row"><div class="ad-num">200</div><div class="ad-num-label">candidates sourced</div></div>
+              <div class="ad-number-row"><div class="ad-num">40</div><div class="ad-num-label">vetted &amp; screened</div></div>
+              <div class="ad-number-row"><div class="ad-num">12</div><div class="ad-num-label">deep interviews</div></div>
+              <div class="ad-number-row"><div class="ad-num">3</div><div class="ad-num-label">finalists presented</div></div>
+              <div class="ad-number-row"><div class="ad-num">1</div><div class="ad-num-label">right pastor placed</div></div>
+            </div>
+            <div class="ad-cta">See Our Process <span class="ad-cta-arrow">→</span></div>
           </div>
         </div>
       </div>
@@ -335,45 +588,146 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
 
 </div>
 
+<!-- Hidden capture stage — clones are dropped here at full native size before html2canvas runs -->
+<div id="capture-stage"></div>
+
 <script>
+/* ========== AD CAPTIONS ========== */
+var CAPTIONS = {
+  ad1: "Hiring the wrong pastor doesn't show up on a resume — it shows up on Sunday morning, six months later, when the staff starts leaving.\n\nWe help large churches avoid that. Confidential pastoral search & ministry staffing for congregations of 1,000+.\n\n→ hire.one39.co",
+
+  ad2: "The churches you respect aren't posting pastor jobs on Indeed. They're quietly making one phone call.\n\nOne39 places senior, executive, and ministry leaders for the names you know — and for the next great church no one's heard of yet.\n\n→ hire.one39.co",
+
+  ad3: "Search committee meeting #11. Same three names. Same three doubts. Same prayer asking God to make it clearer.\n\nThere's a faster way that doesn't sacrifice discernment. We handle the vetting, background checks, cultural fit, and confidentiality — your committee handles what only it can: the prayer.\n\n→ hire.one39.co",
+
+  ad4: "If your church doesn't look or feel like the suburban template, neither should the firm helping you hire.\n\nOne39 understands the dynamics of large Black church leadership — from associate pastors to executive directors. We've placed in COGIC, NBC, AME, and non-denominational megachurches alike.\n\n→ hire.one39.co",
+
+  ad5: "Your ministry is too important to gamble on the wrong hire.\n\nConfidential pastoral search built for medium-to-large churches that take their leadership pipeline as seriously as they take their preaching.\n\nTap to start a confidential conversation. → hire.one39.co",
+
+  ad6: "Looking for your next senior pastor? Or executive pastor, worship leader, or youth director?\n\nOne39 finds, vets, and places ministry leaders for churches that know the difference between a resume and a shepherd.\n\n→ hire.one39.co",
+
+  ad7: "We can't tell you which church needed a senior pastor in 90 days.\n\nWe can't show you the search committee's notes. We can't even put their logo on our website.\n\nThat's the point. And that's why they hired us.\n\n→ hire.one39.co",
+
+  ad8: "If you're a senior leader reading this, one of these has been said in your church's hallway this year:\n\n\"He's charismatic on the platform but the staff is scared of him.\"\n\"The founder's son feels called but the elders don't feel peace.\"\n\"Our worship leader is preaching more than the pastor.\"\n\nWe've placed around all of it. Quietly.\n\n→ hire.one39.co",
+
+  ad9: "This might be the only ad you'll ever see from a search firm telling you NOT to call them yet.\n\nDon't reach out to One39 if you're 48 hours past resignation and the board is panicking. Reach out in 30 days, when everyone has caught their breath and you can hear God again.\n\nWe'll still be here. → hire.one39.co",
+
+  ad10: "It's Friday. Sunday's coming. Who's preaching?\n\nIf your church is in pastoral transition, you're not the only ministry wrestling with that question this week. We help large congregations find the right shepherd — without the panic and without the public scramble.\n\n→ hire.one39.co",
+
+  ad11: "\"And I will give you pastors according to mine heart, which shall feed you with knowledge and understanding.\" — Jeremiah 3:15 (KJV)\n\nThat verse is older than every search firm. It's also our entire job description. We don't find resumes. We find shepherds — for churches who know the difference.\n\n→ hire.one39.co",
+
+  ad12: "Here's what one pastoral placement actually looks like at One39:\n\n200 candidates sourced.\n40 vetted and screened.\n12 deep interviews.\n3 finalists presented.\n1 right hire.\n\nWe do that work so your search committee can do the work only they can do — discerning the call.\n\n→ hire.one39.co"
+};
+
+/* Inject captions under each ad-section */
+document.querySelectorAll('.ad-section').forEach(function(section){
+  var btn = section.querySelector('.btn-download');
+  if(!btn) return;
+  var id = btn.getAttribute('data-target');
+  var captionText = CAPTIONS[id];
+  if(!captionText) return;
+
+  var box = document.createElement('div');
+  box.className = 'caption-box';
+  box.innerHTML =
+    '<div class="caption-box-head">' +
+      '<div class="caption-box-label">Suggested Caption</div>' +
+      '<button class="btn-copy" data-caption-id="' + id + '">Copy Caption</button>' +
+    '</div>' +
+    '<div class="caption-text"></div>';
+  box.querySelector('.caption-text').textContent = captionText;
+  section.appendChild(box);
+});
+
+/* Copy caption handlers */
+document.querySelectorAll('.btn-copy').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var id = btn.getAttribute('data-caption-id');
+    var text = CAPTIONS[id] || '';
+    var done = function(){
+      var original = btn.textContent;
+      btn.textContent = '✓ Copied';
+      setTimeout(function(){ btn.textContent = original; }, 1600);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){
+        // fallback
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch(e){}
+        document.body.removeChild(ta);
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  });
+});
+
+function captureAd(targetId, fileName){
+  return new Promise(function(resolve, reject){
+    var original = document.getElementById(targetId);
+    if(!original){ reject(new Error('Ad not found: ' + targetId)); return; }
+
+    // Clone the ad node and place it at full size in a hidden capture stage.
+    // This bypasses any parent CSS transforms (which break html2canvas).
+    var stage = document.getElementById('capture-stage');
+    stage.innerHTML = '';
+    var clone = original.cloneNode(true);
+    // Force the clone to its native dimensions (the source class controls size)
+    clone.style.transform = 'none';
+    clone.style.position = 'static';
+    stage.appendChild(clone);
+
+    // Wait one frame so the browser lays out the clone
+    requestAnimationFrame(function(){
+      html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#0E0807',
+        logging: false,
+        width: clone.offsetWidth,
+        height: clone.offsetHeight,
+        windowWidth: clone.offsetWidth,
+        windowHeight: clone.offsetHeight
+      }).then(function(canvas){
+        stage.innerHTML = '';
+        canvas.toBlob(function(blob){
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = fileName + '.png';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 'image/png');
+      }).catch(function(err){
+        stage.innerHTML = '';
+        reject(err);
+      });
+    });
+  });
+}
+
 document.querySelectorAll('.btn-download').forEach(function(btn){
   btn.addEventListener('click', function(){
     var targetId = btn.getAttribute('data-target');
     var fileName = btn.getAttribute('data-name') || ('one39-ad-' + targetId);
-    var node = document.getElementById(targetId);
-    if(!node){ alert('Ad node not found: ' + targetId); return; }
-
     btn.disabled = true;
     var originalText = btn.textContent;
     btn.textContent = 'Rendering…';
-
-    html2canvas(node, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: '#0E0807',
-      logging: false,
-      width: node.offsetWidth,
-      height: node.offsetHeight
-    }).then(function(canvas){
-      canvas.toBlob(function(blob){
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = fileName + '.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        btn.disabled = false;
-        btn.textContent = '✓ Downloaded';
-        setTimeout(function(){ btn.textContent = originalText; }, 2000);
-      }, 'image/png');
+    captureAd(targetId, fileName).then(function(){
+      btn.textContent = '✓ Downloaded';
+      setTimeout(function(){ btn.textContent = originalText; btn.disabled = false; }, 1800);
     }).catch(function(err){
       console.error('Render failed:', err);
-      btn.disabled = false;
       btn.textContent = 'Failed — see console';
-      setTimeout(function(){ btn.textContent = originalText; }, 3000);
+      setTimeout(function(){ btn.textContent = originalText; btn.disabled = false; }, 3000);
     });
   });
 });
