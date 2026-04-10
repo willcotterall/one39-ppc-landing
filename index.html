@@ -104,11 +104,12 @@ button{cursor:pointer}
 
 /* ========== ROLES WE PLACE ========== */
 .roles-section{background:#0E0807;padding:100px 0;overflow:hidden}
+.roles-marquee{margin-left:-24px;margin-right:-24px}
 .roles-top{text-align:center;margin-bottom:48px}
 .roles-kicker{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.45em;color:#7E7C7A;margin-bottom:16px}
 .roles-headline{font-size:36px;font-weight:700;text-transform:uppercase;letter-spacing:-1px;text-align:center;color:#FFFFFF}
 .roles-marquee{overflow:hidden;position:relative}
-.roles-marquee::before,.roles-marquee::after{content:'';position:absolute;top:0;bottom:0;width:24px;z-index:2;pointer-events:none}
+.roles-marquee::before,.roles-marquee::after{content:'';position:absolute;top:0;bottom:0;width:8px;z-index:2;pointer-events:none}
 .roles-marquee::before{left:0;background:linear-gradient(90deg,#0E0807,transparent)}
 .roles-marquee::after{right:0;background:linear-gradient(270deg,#0E0807,transparent)}
 .roles-track{display:flex;gap:12px;width:max-content;animation:scrollPills 45s linear infinite}
