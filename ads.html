@@ -88,8 +88,9 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
    ============================================ */
 #ad2 .ad-content{padding:96px;justify-content:space-between}
 #ad2 .ad-headline{font-size:96px;letter-spacing:-4px}
-#ad2 .ad-logo-strip{display:grid;grid-template-columns:1fr 1fr;gap:50px 70px;align-items:center;justify-items:center;margin-top:8px}
-#ad2 .ad-logo-strip img{height:78px;width:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:0.92}
+#ad2 .ad-logo-strip{display:grid;grid-template-columns:1fr 1fr;gap:60px 80px;margin-top:8px}
+#ad2 .ad-logo-cell{display:flex;align-items:center;justify-content:center;height:140px;width:100%;padding:10px}
+#ad2 .ad-logo-cell img{max-height:100%;max-width:100%;width:auto;height:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:0.95}
 #ad2 .ad-cta{font-size:20px;padding:22px 36px;align-self:flex-start}
 
 /* ============================================
@@ -210,7 +211,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
       <div class="meta">
         <span class="num">Ad 01</span>
         <span class="dims">1080 × 1080 · Square</span>
-        <span class="desc">"Too Important" — matches landing page headline.</span>
+        <span class="desc">"Too Important". Matches landing page headline.</span>
       </div>
       <button class="btn-download" data-target="ad1" data-name="one39-ad-01-square-too-important">Download PNG</button>
     </div>
@@ -242,7 +243,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
       <div class="meta">
         <span class="num">Ad 02</span>
         <span class="dims">1080 × 1080 · Square</span>
-        <span class="desc">Social proof — real partner logos.</span>
+        <span class="desc">Social proof with real partner logos.</span>
       </div>
       <button class="btn-download" data-target="ad2" data-name="one39-ad-02-square-trusted-by">Download PNG</button>
     </div>
@@ -257,10 +258,10 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
               <div class="ad-headline" style="margin-top:18px">The churches <em>you trust.</em></div>
             </div>
             <div class="ad-logo-strip">
-              <img src="/logos/potters-house.png">
-              <img src="/logos/lifechurch.svg">
-              <img src="/logos/union-church.png" style="filter:none">
-              <img src="/logos/transformation-church.png">
+              <div class="ad-logo-cell"><img src="/logos/potters-house.png"></div>
+              <div class="ad-logo-cell"><img src="/logos/lifechurch.svg"></div>
+              <div class="ad-logo-cell"><img src="/logos/union-church.png" style="filter:none"></div>
+              <div class="ad-logo-cell"><img src="/logos/transformation-church.png"></div>
             </div>
             <div class="ad-cta">Hire.One39.co <span class="ad-cta-arrow">→</span></div>
           </div>
@@ -404,7 +405,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
       <div class="meta">
         <span class="num">Ad 07</span>
         <span class="dims">1080 × 1080 · Square</span>
-        <span class="desc">"This search never happened" — confidentiality as the headline.</span>
+        <span class="desc">"This search never happened." Confidentiality as the headline.</span>
       </div>
       <button class="btn-download" data-target="ad7" data-name="one39-ad-07-square-redacted">Download PNG</button>
     </div>
@@ -417,7 +418,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
               <div class="ad-quote" style="margin-top:54px">
                 "<span class="redacted">&nbsp;Mount Calvary AME&nbsp;</span> needed a senior pastor in 90 days. We can't tell you who they are. We can tell you he's preaching this Sunday."
               </div>
-              <div class="ad-attribution">— Confidential Search · 2025</div>
+              <div class="ad-attribution">Confidential Search · 2025</div>
             </div>
             <div>
               <div class="ad-headline">Confidentiality is <em>the job.</em></div>
@@ -436,7 +437,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
       <div class="meta">
         <span class="num">Ad 08</span>
         <span class="dims">1080 × 1350 · Vertical (4:5)</span>
-        <span class="desc">Insider scenarios — signals deep cultural fluency.</span>
+        <span class="desc">Insider scenarios. Signals deep cultural fluency.</span>
       </div>
       <button class="btn-download" data-target="ad8" data-name="one39-ad-08-vertical-seen-movie">Download PNG</button>
     </div>
@@ -483,7 +484,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
             </div>
             <div>
               <div class="ad-headline">Don't <em>call us.</em></div>
-              <div class="ad-sub" style="margin-top:32px">Not if your senior pastor resigned this Sunday and the board is panicking.<br><br>Call us in 30 days — once everyone has caught their breath.</div>
+              <div class="ad-sub" style="margin-top:32px">Not if your senior pastor resigned this Sunday and the board is panicking.<br><br>Call us in 30 days, once everyone has caught their breath.</div>
             </div>
             <div class="ad-cta">When You're Ready <span class="ad-cta-arrow">→</span></div>
           </div>
@@ -542,7 +543,7 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
             <div>
               <img src="/logos/one39.png" class="ad-logo">
               <div class="ad-verse">"And I will give you pastors according to mine heart, which shall feed you with knowledge and understanding."</div>
-              <div class="ad-verse-ref">— Jeremiah 3:15 (KJV)</div>
+              <div class="ad-verse-ref">Jeremiah 3:15 (KJV)</div>
             </div>
             <div>
               <div class="ad-headline">That's <em>our brief.</em></div>
@@ -594,29 +595,29 @@ html,body{font-family:'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothi
 <script>
 /* ========== AD CAPTIONS ========== */
 var CAPTIONS = {
-  ad1: "Hiring the wrong pastor doesn't show up on a resume — it shows up on Sunday morning, six months later, when the staff starts leaving.\n\nWe help large churches avoid that. Confidential pastoral search & ministry staffing for congregations of 1,000+.\n\n→ hire.one39.co",
+  ad1: "Hiring the wrong pastor doesn't show up on a resume. It shows up on Sunday morning, six months later, when the staff starts leaving.\n\nWe help large churches avoid that. Confidential pastoral search and ministry staffing for congregations of 1,000+.\n\n👇 Tap below before you read another resume.",
 
-  ad2: "The churches you respect aren't posting pastor jobs on Indeed. They're quietly making one phone call.\n\nOne39 places senior, executive, and ministry leaders for the names you know — and for the next great church no one's heard of yet.\n\n→ hire.one39.co",
+  ad2: "The churches you respect aren't posting pastor jobs on Indeed. They're quietly making one phone call.\n\nOne39 places senior, executive, and ministry leaders for the names you know, and for the next great church no one's heard of yet.\n\n👇 Tap below to make the call your peers already made.",
 
-  ad3: "Search committee meeting #11. Same three names. Same three doubts. Same prayer asking God to make it clearer.\n\nThere's a faster way that doesn't sacrifice discernment. We handle the vetting, background checks, cultural fit, and confidentiality — your committee handles what only it can: the prayer.\n\n→ hire.one39.co",
+  ad3: "Search committee meeting #11. Same three names. Same three doubts. Same prayer asking God to make it clearer.\n\nThere's a faster way that doesn't sacrifice discernment. We handle the vetting, background checks, cultural fit, and confidentiality. Your committee handles what only it can: the prayer.\n\n👇 Tap below. We'll take meeting #12 off your calendar.",
 
-  ad4: "If your church doesn't look or feel like the suburban template, neither should the firm helping you hire.\n\nOne39 understands the dynamics of large Black church leadership — from associate pastors to executive directors. We've placed in COGIC, NBC, AME, and non-denominational megachurches alike.\n\n→ hire.one39.co",
+  ad4: "If your church doesn't look or feel like the suburban template, neither should the firm helping you hire.\n\nOne39 understands the dynamics of large Black church leadership, from associate pastors to executive directors. We've placed in COGIC, NBC, AME, and non-denominational megachurches alike.\n\n👇 Tap to talk to someone who already gets it.",
 
-  ad5: "Your ministry is too important to gamble on the wrong hire.\n\nConfidential pastoral search built for medium-to-large churches that take their leadership pipeline as seriously as they take their preaching.\n\nTap to start a confidential conversation. → hire.one39.co",
+  ad5: "Your ministry is too important to gamble on the wrong hire.\n\nConfidential pastoral search built for medium to large churches that take their leadership pipeline as seriously as they take their preaching.\n\n👇 Tap below to start a confidential conversation today.",
 
-  ad6: "Looking for your next senior pastor? Or executive pastor, worship leader, or youth director?\n\nOne39 finds, vets, and places ministry leaders for churches that know the difference between a resume and a shepherd.\n\n→ hire.one39.co",
+  ad6: "Looking for your next senior pastor? Or executive pastor, worship leader, or youth director?\n\nOne39 finds, vets, and places ministry leaders for churches that know the difference between a resume and a shepherd.\n\n👇 Tap below and tell us what your church needs.",
 
-  ad7: "We can't tell you which church needed a senior pastor in 90 days.\n\nWe can't show you the search committee's notes. We can't even put their logo on our website.\n\nThat's the point. And that's why they hired us.\n\n→ hire.one39.co",
+  ad7: "We can't tell you which church needed a senior pastor in 90 days.\n\nWe can't show you the search committee's notes. We can't even put their logo on our website.\n\nThat's the point. And that's why they hired us.\n\n👇 Tap below. We never tell.",
 
-  ad8: "If you're a senior leader reading this, one of these has been said in your church's hallway this year:\n\n\"He's charismatic on the platform but the staff is scared of him.\"\n\"The founder's son feels called but the elders don't feel peace.\"\n\"Our worship leader is preaching more than the pastor.\"\n\nWe've placed around all of it. Quietly.\n\n→ hire.one39.co",
+  ad8: "If you're a senior leader reading this, one of these has been said in your church's hallway this year:\n\n\"He's charismatic on the platform but the staff is scared of him.\"\n\"The founder's son feels called but the elders don't feel peace.\"\n\"Our worship leader is preaching more than the pastor.\"\n\nWe've placed around all of it. Quietly.\n\n👇 Tap below to talk to someone who's already been in this room.",
 
-  ad9: "This might be the only ad you'll ever see from a search firm telling you NOT to call them yet.\n\nDon't reach out to One39 if you're 48 hours past resignation and the board is panicking. Reach out in 30 days, when everyone has caught their breath and you can hear God again.\n\nWe'll still be here. → hire.one39.co",
+  ad9: "This might be the only ad you'll ever see from a search firm telling you NOT to call them yet.\n\nDon't reach out to One39 if you're 48 hours past a resignation and the board is panicking. Reach out in 30 days, when everyone has caught their breath and you can hear God again.\n\nWe'll still be here.\n\n👇 Tap below to bookmark us for the right moment.",
 
-  ad10: "It's Friday. Sunday's coming. Who's preaching?\n\nIf your church is in pastoral transition, you're not the only ministry wrestling with that question this week. We help large congregations find the right shepherd — without the panic and without the public scramble.\n\n→ hire.one39.co",
+  ad10: "It's Friday. Sunday's coming. Who's preaching?\n\nIf your church is in pastoral transition, you're not the only ministry wrestling with that question this week. We help large congregations find the right shepherd, without the panic and without the public scramble.\n\n👇 Tap below before next Sunday gets here.",
 
-  ad11: "\"And I will give you pastors according to mine heart, which shall feed you with knowledge and understanding.\" — Jeremiah 3:15 (KJV)\n\nThat verse is older than every search firm. It's also our entire job description. We don't find resumes. We find shepherds — for churches who know the difference.\n\n→ hire.one39.co",
+  ad11: "\"And I will give you pastors according to mine heart, which shall feed you with knowledge and understanding.\" Jeremiah 3:15 (KJV)\n\nThat verse is older than every search firm. It's also our entire job description. We don't find resumes. We find shepherds, for churches who know the difference.\n\n👇 Tap below to begin your search the right way.",
 
-  ad12: "Here's what one pastoral placement actually looks like at One39:\n\n200 candidates sourced.\n40 vetted and screened.\n12 deep interviews.\n3 finalists presented.\n1 right hire.\n\nWe do that work so your search committee can do the work only they can do — discerning the call.\n\n→ hire.one39.co"
+  ad12: "Here's what one pastoral placement actually looks like at One39:\n\n200 candidates sourced.\n40 vetted and screened.\n12 deep interviews.\n3 finalists presented.\n1 right hire.\n\nWe do that work so your search committee can do the work only it can do: discerning the call.\n\n👇 Tap below to see how we'd run your search."
 };
 
 /* Inject captions under each ad-section */
