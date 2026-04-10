@@ -659,12 +659,12 @@ button{cursor:pointer}
       }).then(function(){
         // Fire Meta Pixel Lead event if available
         if(typeof fbq !== 'undefined'){ try { fbq('track', 'Lead'); } catch(e){} }
-        window.location.href = '/thank-you.html';
+        window.location.href = '/thank-you';
       }).catch(function(err){
         console.error('Form submit failed:', err);
         // Still redirect — webhook may have received it even on opaque/CORS error
         if(typeof fbq !== 'undefined'){ try { fbq('track', 'Lead'); } catch(e){} }
-        window.location.href = '/thank-you.html';
+        window.location.href = '/thank-you';
       });
     });
 
