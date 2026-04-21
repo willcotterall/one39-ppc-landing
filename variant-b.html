@@ -49,12 +49,11 @@ button{cursor:pointer}
 .btn-ghost:hover{background:#FFFFFF;color:#0E0807}
 
 /* ========== HERO (FORM-FIRST SPLIT) ========== */
-.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:80px 0 60px}
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;overflow:hidden;padding:120px 0 80px}
 .hero-bg{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1600288480699-0b0d8a456dd8?w=1920&q=80') center 60%/cover no-repeat;will-change:transform}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(14,8,7,0.88) 0%,rgba(14,8,7,0.72) 50%,rgba(14,8,7,0.55) 100%)}
 .hero-grid{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
 .hero-left{color:#FFFFFF}
-.hero-logo{height:48px;width:auto;margin-bottom:32px}
 .hero-kicker{font-size:13px;font-weight:400;text-transform:uppercase;letter-spacing:0.45em;color:#CAAA6B;margin-bottom:24px}
 .hero-left h1{font-size:56px;font-weight:700;text-transform:uppercase;letter-spacing:-3px;line-height:0.95;color:#FFFFFF;margin-bottom:28px}
 .hero-left h1 span{display:block}
@@ -118,24 +117,13 @@ button{cursor:pointer}
 .testimonial-church{font-size:13px;color:#CAAA6B;font-weight:400;letter-spacing:0.04em}
 
 /* ========== ROLES WE PLACE ========== */
-.roles-section{background:#0E0807;padding:100px 0;overflow:hidden}
-.roles-marquee{margin-left:-24px;margin-right:-24px}
-.roles-top{text-align:center;margin-bottom:48px}
+.roles-section{background:#FFFFFF;padding:100px 0}
+.roles-top{text-align:center;margin-bottom:56px}
 .roles-kicker{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.45em;color:#7E7C7A;margin-bottom:16px}
-.roles-headline{font-size:36px;font-weight:700;text-transform:uppercase;letter-spacing:-1px;text-align:center;color:#FFFFFF}
-.roles-marquee{overflow:hidden;position:relative}
-.roles-marquee::before,.roles-marquee::after{content:'';position:absolute;top:0;bottom:0;width:8px;z-index:2;pointer-events:none}
-.roles-marquee::before{left:0;background:linear-gradient(90deg,#0E0807,transparent)}
-.roles-marquee::after{right:0;background:linear-gradient(270deg,#0E0807,transparent)}
-.roles-track{display:flex;gap:12px;width:max-content;animation:scrollPills 45s linear infinite}
-.roles-track:hover{animation-play-state:paused}
-@keyframes scrollPills{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-@keyframes scrollPillsReverse{0%{transform:translateX(-50%)}100%{transform:translateX(0)}}
-.roles-track-reverse{animation:scrollPillsReverse 40s linear infinite}
-.roles-track-reverse:hover{animation-play-state:paused}
-.roles-marquee+.roles-marquee{margin-top:14px}
-.role-pill{display:inline-flex;align-items:center;padding:10px 22px;background:rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:100px;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.6);white-space:nowrap;transition:all 0.35s ease;cursor:default}
-.role-pill:hover{background:rgba(198,172,116,0.15);border-color:rgba(198,172,116,0.4);color:#FFFFFF;transform:translateY(-2px)}
+.roles-headline{font-size:36px;font-weight:700;text-transform:uppercase;letter-spacing:-1px;text-align:center;color:#0E0807}
+.roles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#EEE6D7}
+.role-card{background:#FFFFFF;padding:32px 24px;text-align:center;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#403B3A;transition:all 0.35s ease}
+.role-card:hover{background:#EEE6D7;color:#0E0807}
 
 /* ========== STATS ========== */
 .stats-section{background:#0E0807;padding:80px 0}
@@ -173,39 +161,38 @@ button{cursor:pointer}
   .hero{padding:100px 0 60px}
   .hero-grid{grid-template-columns:1fr;gap:40px}
   .hero-left h1{font-size:42px;letter-spacing:-2px}
-  .hero-logo{height:40px;margin-bottom:24px}
   .hero-testimonial{display:none}
   .how-grid{grid-template-columns:repeat(2,1fr);gap:32px}
   .testimonials-grid{grid-template-columns:1fr;gap:48px}
+  .roles-grid{grid-template-columns:repeat(2,1fr)}
   .stats-row{flex-wrap:wrap}
   .stat{flex:1 1 50%;min-width:140px}
   .stat+.stat::before{display:none}
   .how-headline{font-size:28px}
   .roles-headline{font-size:28px}
-  .role-pill{padding:9px 20px;font-size:11px}
   .bottom-cta h2{font-size:36px}
-  .logos-row{gap:24px}
-  .logos-row img{height:32px !important}
+  .logos-row{gap:32px}
+  .logos-row img{height:36px}
+  .nav-phone{display:none}
   .form-card{padding:32px 24px}
 }
 @media(max-width:480px){
-  .hero{padding:80px 0 40px}
-  .hero-logo{height:36px;margin-bottom:20px}
-  .hero-left h1{font-size:32px;letter-spacing:-1.5px}
-  .hero-kicker{font-size:11px;letter-spacing:0.3em;margin-bottom:16px}
-  .hero-bullets li{font-size:14px;margin-bottom:10px}
+  .hero{padding:90px 0 48px}
+  .hero-left h1{font-size:34px;letter-spacing:-1.5px}
+  .hero-bullets li{font-size:14px}
   .form-card{padding:24px 18px}
   .form-card .field-row{grid-template-columns:1fr}
-  .form-card-title{font-size:16px}
   .how-grid{grid-template-columns:1fr;gap:24px}
-  .stat{flex:1 1 50%}
-  .stat-number{font-size:36px}
-  .how-headline{font-size:22px}
+  .roles-grid{grid-template-columns:1fr}
+  .stat{flex:1 1 100%}
+  .stat-number{font-size:44px}
+  .how-headline{font-size:24px}
   .roles-headline{font-size:22px}
-  .role-pill{padding:8px 16px;font-size:10px}
-  .bottom-cta h2{font-size:28px;letter-spacing:-1.5px}
-  .logos-row img{height:24px !important}
-  .logos-row{gap:16px}
+  .bottom-cta h2{font-size:30px;letter-spacing:-1.5px}
+  .logos-row img{height:28px}
+  .logos-row{gap:20px}
+  .nav-logo img{height:30px}
+  .btn-ghost{font-size:11px;padding:10px 20px}
   .testimonial-quote{font-size:14px}
 }
 </style>
@@ -214,7 +201,15 @@ button{cursor:pointer}
 
 <!-- ===== NAV ===== -->
 <nav class="nav" id="nav">
-  <div class="container nav-inner"></div>
+  <div class="container nav-inner">
+    <a href="#" class="nav-logo">
+      <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" alt="One39 Staffing">
+    </a>
+    <div class="nav-contact">
+      <a href="tel:9182217404" class="nav-phone">(918) 221-7404</a>
+      <a href="#hero-form" class="btn-ghost nav-cta">START YOUR SEARCH</a>
+    </div>
+  </div>
 </nav>
 
 <!-- ===== HERO: FORM-FIRST SPLIT ===== -->
@@ -225,17 +220,16 @@ button{cursor:pointer}
 
     <!-- LEFT COLUMN: Value Prop -->
     <div class="hero-left">
-      <img src="https://one39.co/wp-content/uploads/elementor/thumbs/One-Thirty-Nine-Logos-25-scaled-1-r73cpl8afykotaqrldc2b01sbro7ww9lcc0u2ujyaw.png" alt="One39" class="hero-logo">
-      <p class="hero-kicker">ONE39 FINDS, VETS &amp; PLACES LEADERS FOR <span style="color:#FFFFFF">MEDIUM TO LARGE CHURCHES.</span></p>
-      <h1>YOUR MINISTRY IS <em>TOO IMPORTANT</em> FOR THE WRONG HIRE.</h1>
+      <p class="hero-kicker">EXECUTIVE MINISTRY SEARCH</p>
+      <h1><span>FIND YOUR NEXT</span><span><em>KEY HIRE.</em></span></h1>
       <ul class="hero-bullets">
-        <li><strong>You lead your church.</strong> We handle the search, from vetting to placement.</li>
-        <li><strong>Only Top 10% candidates.</strong> If we wouldn't hire them, you'll never see them.</li>
-        <li><strong>12-month guarantee.</strong> Wrong fit? We restart at no cost.</li>
+        <li><strong>Top 10% Talent Only</strong> &mdash; we pre-vet so you only meet elite candidates</li>
+        <li><strong>48-Hour Fast Track</strong> &mdash; your search kicks off within two business days</li>
+        <li><strong>12-Month Guarantee</strong> &mdash; if it doesn't work, we restart at no cost</li>
       </ul>
       <div class="hero-testimonial">
         <blockquote>&ldquo;One39 has been a game-changer. Chris and his team built a strong relationship with us, understood our church culture, and helped us hire top candidates.&rdquo;</blockquote>
-        <cite>Stephen Chandler, Union Church</cite>
+        <cite>Stephen Chandler &mdash; Union Church</cite>
       </div>
     </div>
 
@@ -243,12 +237,12 @@ button{cursor:pointer}
     <div id="hero-form">
       <form class="form-card" id="inquiryForm" action="#">
         <p class="form-card-title">Start Your Search</p>
-        <p class="form-card-sub">Tell us about your role. We&rsquo;ll be in touch within 24 hours.</p>
+        <p class="form-card-sub">Tell us about your role &mdash; we&rsquo;ll be in touch within 24 hours.</p>
 
         <div class="field-row">
           <div>
-            <label>Church Name</label>
-            <input type="text" data-field="church_name" placeholder="e.g. Grace Community Church">
+            <label>Church Name <span class="req">*</span></label>
+            <input type="text" data-field="church_name" required placeholder="e.g. Grace Community Church">
           </div>
           <div>
             <label>Your Name <span class="req">*</span></label>
@@ -272,46 +266,43 @@ button{cursor:pointer}
             <label>Weekly Attendance <span class="req">*</span></label>
             <select data-field="attendance" required>
               <option value="" disabled selected>Select range</option>
-              <option>Under 500</option>
               <option>500 - 999</option>
               <option>1,000 - 2,499</option>
               <option>2,500 - 4,999</option>
               <option>5,000+</option>
             </select>
           </div>
+        </div>
+
+        <div class="field-row">
           <div>
             <label>Position Hiring For <span class="req">*</span></label>
             <select data-field="position" required>
               <option value="" disabled selected>Select position</option>
-              <option>Lead / Senior Pastor</option>
+              <option>Lead Pastor</option>
               <option>Executive Pastor</option>
-              <option>Worship Pastor / Music Director</option>
-              <option>Youth / Student Pastor</option>
-              <option>Children's / Family Pastor</option>
+              <option>Worship Pastor</option>
+              <option>Student / Youth Pastor</option>
+              <option>Children's Pastor</option>
               <option>Campus Pastor</option>
-              <option>Associate Pastor</option>
-              <option>Teaching Pastor</option>
-              <option>Creative / Media Director</option>
-              <option>Connections / Guest Experience</option>
-              <option>Operations / Admin Director</option>
-              <option>Discipleship / Groups Pastor</option>
-              <option>Production Director</option>
+              <option>Creative Director</option>
               <option>Communications Director</option>
-              <option>Multiple Positions</option>
+              <option>Operations Director</option>
               <option>Other</option>
             </select>
           </div>
+          <div>
+            <label>Ideal Timeline</label>
+            <select data-field="timeline">
+              <option value="" disabled selected>Select timeline</option>
+              <option>ASAP</option>
+              <option>1 - 3 Months</option>
+              <option>3 - 6 Months</option>
+              <option>6+ Months</option>
+              <option>Just Exploring</option>
+            </select>
+          </div>
         </div>
-
-        <label>Ideal Timeline</label>
-        <select data-field="timeline">
-          <option value="" disabled selected>Select timeline</option>
-          <option>ASAP</option>
-          <option>1 - 3 Months</option>
-          <option>3 - 6 Months</option>
-          <option>6+ Months</option>
-          <option>Just Exploring</option>
-        </select>
 
         <label>Anything else?</label>
         <textarea data-field="notes" placeholder="Tell us about the role, your church culture, or anything helpful..."></textarea>
@@ -350,7 +341,7 @@ button{cursor:pointer}
     <div class="how-top">
       <p class="how-kicker">THE PROCESS</p>
       <h2 class="how-headline">HOW IT WORKS</h2>
-      <p class="how-sub">From first call to placed candidate. Here&rsquo;s what to expect.</p>
+      <p class="how-sub">From first call to placed candidate &mdash; here&rsquo;s what to expect.</p>
     </div>
     <div class="how-grid">
       <div class="how-step">
@@ -361,7 +352,7 @@ button{cursor:pointer}
       <div class="how-step">
         <div class="how-step-num">2</div>
         <h3>We Visit Your Church</h3>
-        <p>We come on-site to experience your culture firsthand so we find candidates who truly fit.</p>
+        <p>We come on-site to experience your culture firsthand &mdash; so we find candidates who truly fit.</p>
       </div>
       <div class="how-step">
         <div class="how-step-num">3</div>
@@ -396,7 +387,7 @@ button{cursor:pointer}
       </div>
       <div class="testimonial-card">
         <img class="testimonial-photo" src="https://one39.co/wp-content/uploads/elementor/thumbs/c45c1fd127625b9602d8143b37405d2d-e1751112276915-r7z0ko5b0iuy2j8336vapjlzw04g7cyms4t2i7ac0k.jpeg" alt="John K. Jenkins Sr." loading="lazy">
-        <p class="testimonial-quote">&ldquo;One39 helped us overcome hiring challenges for hard-to-fill roles by learning our culture and finding qualified candidates. Their service has been tremendous. We highly recommend them.&rdquo;</p>
+        <p class="testimonial-quote">&ldquo;One39 helped us overcome hiring challenges for hard-to-fill roles by learning our culture and finding qualified candidates. Their service has been tremendous &mdash; we highly recommend them.&rdquo;</p>
         <p class="testimonial-name">John K. Jenkins Sr.</p>
         <p class="testimonial-church">First Baptist Church of Glenarden</p>
       </div>
@@ -411,51 +402,16 @@ button{cursor:pointer}
       <p class="roles-kicker">POSITIONS</p>
       <h2 class="roles-headline">ROLES WE PLACE</h2>
     </div>
-    <div class="roles-marquee">
-      <div class="roles-track">
-        <span class="role-pill">Lead Pastor</span>
-        <span class="role-pill">Executive Pastor</span>
-        <span class="role-pill">Worship Pastor</span>
-        <span class="role-pill">Student / Youth Pastor</span>
-        <span class="role-pill">Children's Pastor</span>
-        <span class="role-pill">Campus Pastor</span>
-        <span class="role-pill">Creative Director</span>
-        <span class="role-pill">Communications Director</span>
-        <span class="role-pill">Operations Director</span>
-        <!-- Duplicate for seamless loop -->
-        <span class="role-pill">Lead Pastor</span>
-        <span class="role-pill">Executive Pastor</span>
-        <span class="role-pill">Worship Pastor</span>
-        <span class="role-pill">Student / Youth Pastor</span>
-        <span class="role-pill">Children's Pastor</span>
-        <span class="role-pill">Campus Pastor</span>
-        <span class="role-pill">Creative Director</span>
-        <span class="role-pill">Communications Director</span>
-        <span class="role-pill">Operations Director</span>
-      </div>
-    </div>
-    <div class="roles-marquee">
-      <div class="roles-track roles-track-reverse">
-        <span class="role-pill">Associate Pastor</span>
-        <span class="role-pill">Connections Director</span>
-        <span class="role-pill">Minister of Music</span>
-        <span class="role-pill">Family Pastor</span>
-        <span class="role-pill">Production Director</span>
-        <span class="role-pill">Teaching Pastor</span>
-        <span class="role-pill">Church Administrator</span>
-        <span class="role-pill">Young Adults Pastor</span>
-        <span class="role-pill">Discipleship Director</span>
-        <!-- Duplicate for seamless loop -->
-        <span class="role-pill">Associate Pastor</span>
-        <span class="role-pill">Connections Director</span>
-        <span class="role-pill">Minister of Music</span>
-        <span class="role-pill">Family Pastor</span>
-        <span class="role-pill">Production Director</span>
-        <span class="role-pill">Teaching Pastor</span>
-        <span class="role-pill">Church Administrator</span>
-        <span class="role-pill">Young Adults Pastor</span>
-        <span class="role-pill">Discipleship Director</span>
-      </div>
+    <div class="roles-grid">
+      <div class="role-card">Lead Pastor</div>
+      <div class="role-card">Executive Pastor</div>
+      <div class="role-card">Worship Pastor</div>
+      <div class="role-card">Student / Youth Pastor</div>
+      <div class="role-card">Children&rsquo;s Pastor</div>
+      <div class="role-card">Campus Pastor</div>
+      <div class="role-card">Creative Director</div>
+      <div class="role-card">Communications Director</div>
+      <div class="role-card">Operations Director</div>
     </div>
   </div>
 </section>
@@ -492,8 +448,8 @@ button{cursor:pointer}
     <form class="form-card" id="inquiryFormBottom" action="#">
       <div class="field-row">
         <div>
-          <label>Church Name</label>
-          <input type="text" data-field="church_name" placeholder="e.g. Grace Community Church">
+          <label>Church Name <span class="req">*</span></label>
+          <input type="text" data-field="church_name" required placeholder="e.g. Grace Community Church">
         </div>
         <div>
           <label>Your Name <span class="req">*</span></label>
@@ -515,46 +471,42 @@ button{cursor:pointer}
           <label>Weekly Attendance <span class="req">*</span></label>
           <select data-field="attendance" required>
             <option value="" disabled selected>Select range</option>
-            <option>Under 500</option>
             <option>500 - 999</option>
             <option>1,000 - 2,499</option>
             <option>2,500 - 4,999</option>
             <option>5,000+</option>
           </select>
         </div>
+      </div>
+      <div class="field-row">
         <div>
           <label>Position Hiring For <span class="req">*</span></label>
           <select data-field="position" required>
             <option value="" disabled selected>Select position</option>
-            <option>Lead / Senior Pastor</option>
+            <option>Lead Pastor</option>
             <option>Executive Pastor</option>
-            <option>Worship Pastor / Music Director</option>
-            <option>Youth / Student Pastor</option>
-            <option>Children's / Family Pastor</option>
+            <option>Worship Pastor</option>
+            <option>Student / Youth Pastor</option>
+            <option>Children's Pastor</option>
             <option>Campus Pastor</option>
-            <option>Associate Pastor</option>
-            <option>Teaching Pastor</option>
-            <option>Creative / Media Director</option>
-            <option>Connections / Guest Experience</option>
-            <option>Operations / Admin Director</option>
-            <option>Discipleship / Groups Pastor</option>
-            <option>Production Director</option>
+            <option>Creative Director</option>
             <option>Communications Director</option>
-            <option>Multiple Positions</option>
+            <option>Operations Director</option>
             <option>Other</option>
           </select>
         </div>
+        <div>
+          <label>Ideal Timeline</label>
+          <select data-field="timeline">
+            <option value="" disabled selected>Select timeline</option>
+            <option>ASAP</option>
+            <option>1 - 3 Months</option>
+            <option>3 - 6 Months</option>
+            <option>6+ Months</option>
+            <option>Just Exploring</option>
+          </select>
+        </div>
       </div>
-      <label>Ideal Timeline</label>
-      <select data-field="timeline">
-        <option value="" disabled selected>Select timeline</option>
-        <option>ASAP</option>
-        <option>1 - 3 Months</option>
-        <option>3 - 6 Months</option>
-        <option>6+ Months</option>
-        <option>Just Exploring</option>
-      </select>
-
       <label>Anything else?</label>
       <textarea data-field="notes" placeholder="Tell us about the role, your church culture, or anything helpful..."></textarea>
       <input type="hidden" data-field="utm_source" name="utm_source">
@@ -580,7 +532,7 @@ button{cursor:pointer}
       <a href="https://www.facebook.com/groupone39/" target="_blank" rel="noopener">Facebook</a>
       <a href="https://www.instagram.com/groupone39" target="_blank" rel="noopener">Instagram</a>
       <a href="https://www.linkedin.com/company/groupone39" target="_blank" rel="noopener">LinkedIn</a>
-
+      <a href="https://x.com/One39_Staffing" target="_blank" rel="noopener">X</a>
     </div>
     <p class="footer-copy">&copy; 2026 One39 Staffing. All rights reserved.</p>
   </div>
@@ -641,9 +593,6 @@ button{cursor:pointer}
     return valid;
   }
 
-  // GHL Inbound Webhook (Story Growth Funnel)
-  var WEBHOOK_URL = 'https://services.leadconnectorhq.com/hooks/l9GVEA91SsaZzg0pNW61/webhook-trigger/UUFTyq3oyqa71IfENvix';
-
   document.querySelectorAll('#inquiryForm, #inquiryFormBottom').forEach(function(form){
     form.addEventListener('submit', function(e){
       e.preventDefault();
@@ -657,30 +606,14 @@ button{cursor:pointer}
       form.querySelectorAll('[data-field]').forEach(function(el){
         data[el.getAttribute('data-field')] = el.value;
       });
-      data.submitted_at = new Date().toISOString();
-      data.source = 'hire.one39.co';
+      console.log('Form submission:', data);
 
-      // Loading state
+      // Success state
       var btn = form.querySelector('.btn-submit');
-      var originalText = btn.textContent;
-      btn.textContent = 'SENDING…';
+      btn.textContent = 'THANK YOU — WE\'LL BE IN TOUCH';
+      btn.style.background = '#C6AC74';
+      btn.style.color = '#0E0807';
       btn.disabled = true;
-
-      // POST to GHL webhook, then redirect to thank-you
-      fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      }).then(function(){
-        // Fire Meta Pixel Lead event if available
-        if(typeof fbq !== 'undefined'){ try { fbq('track', 'Lead'); } catch(e){} }
-        window.location.href = '/thank-you';
-      }).catch(function(err){
-        console.error('Form submit failed:', err);
-        // Still redirect — webhook may have received it even on opaque/CORS error
-        if(typeof fbq !== 'undefined'){ try { fbq('track', 'Lead'); } catch(e){} }
-        window.location.href = '/thank-you';
-      });
     });
 
     // Clear error on input
