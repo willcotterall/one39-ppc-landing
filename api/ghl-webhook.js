@@ -26,6 +26,17 @@ const CC_EMAIL = "email";
 const CC_DATE = "date_mkpny1wf";
 const CC_RELATIONSHIP = "status";
 const CC_COMMENTS = "long_text4";
+const CC_OWNERSHIP = "people__1";
+
+// Search Manager user IDs (Monday.com)
+const USER_OWEN = 91705318;
+
+// Sub-200 attendance strings we should route to Owen for nurture
+function isSubTwoHundred(attendance) {
+  if (!attendance) return false;
+  const s = String(attendance).toLowerCase();
+  return s.includes("under 200") || s.includes("<200") || s.includes("< 200");
+}
 
 // Leads/Deals board — column IDs
 const LD_STAGE = "status";
@@ -60,14 +71,21 @@ function pickField(body, ...names) {
 }
 
 async function createContact(token, data) {
+  const subTwoHundred = isSubTwoHundred(data.attendance);
+  const commentPrefix = subTwoHundred
+    ? `🔵 NURTURE — Small Church (Under 200) — Assigned to Owen. `
+    : "";
   const columnValues = {
     [CC_FIRST]: data.first,
     [CC_LAST]: data.last,
     [CC_ORG]: data.church,
     [CC_DATE]: { date: todayISO() },
     [CC_RELATIONSHIP]: { index: 3 }, // "Cold Reach Out"
-    [CC_COMMENTS]: `Auto-created from GHL webhook. Source: ${data.source}`,
+    [CC_COMMENTS]: `${commentPrefix}Auto-created from GHL webhook. Source: ${data.source}. Attendance: ${data.attendance || "n/a"}. Position: ${data.position || "n/a"}. Timeline: ${data.timeline || "n/a"}.`,
   };
+  if (subTwoHundred) {
+    columnValues[CC_OWNERSHIP] = { personsAndTeams: [{ id: USER_OWEN, kind: "person" }] };
+  }
   if (data.email) columnValues[CC_EMAIL] = { email: data.email, text: data.email };
   if (data.phone)
     columnValues[CC_PHONE] = {
@@ -195,6 +213,25 @@ module.exports = async function handler(req, res) {
   const rawSource = pickField(body, "source", "contact.source", "trigger");
   const sourceLabel =
     rawSource && !/ppc/i.test(rawSource) ? rawSource : "PPC Ads";
+  const attendance = pickField(
+    body,
+    "attendance",
+    "weekly_attendance",
+    "contact.weekly_attendance",
+    "contact.attendance",
+  );
+  const position = pickField(
+    body,
+    "position",
+    "position_hiring_for",
+    "contact.position_hiring_for",
+  );
+  const timeline = pickField(
+    body,
+    "timeline",
+    "ideal_timeline",
+    "contact.ideal_timeline",
+  );
 
   if (!first && !last && !email && !phone) {
     return res
@@ -209,20 +246,34 @@ module.exports = async function handler(req, res) {
     phone,
     email,
     source: rawSource || sourceLabel,
+    attendance,
+    position,
+    timeline,
   };
 
-  const contactId = await createContact(mondayToken, data);
-  const dealId = await createDeal(mondayToken, {
-    first,
-    last,
-    church,
-    contactItemId: contactId,
-    sourceLabel,
-  });
+  const subTwoHundred = isSubTwoHundred(attendance);
+  const route = subTwoHundred ? "nurture (sub-200 → Owen)" : "active pipeline";
 
-  if (!contactId && !dealId) {
-    return res.status(502).json({ error: "Both Monday writes failed" });
+  // Always create the Contact row
+  const contactId = await createContact(mondayToken, data);
+
+  // Create Deal row ONLY for active pipeline (200+). Sub-200 stays contact-only.
+  let dealId = null;
+  if (!subTwoHundred) {
+    dealId = await createDeal(mondayToken, {
+      first,
+      last,
+      church,
+      contactItemId: contactId,
+      sourceLabel,
+    });
   }
 
-  return res.status(200).json({ ok: true, contactId, dealId, sourceLabel });
+  if (!contactId && !dealId) {
+    return res.status(502).json({ error: "Monday writes failed" });
+  }
+
+  return res
+    .status(200)
+    .json({ ok: true, contactId, dealId, sourceLabel, route, attendance });
 }
