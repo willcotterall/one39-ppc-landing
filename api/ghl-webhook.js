@@ -28,8 +28,10 @@ const CC_RELATIONSHIP = "status";
 const CC_COMMENTS = "long_text4";
 const CC_OWNERSHIP = "people__1";
 
-// Search Manager user IDs (Monday.com)
-const USER_OWEN = 91705318;
+// Owner assignments (Monday.com user IDs)
+const USER_DESMOND = 39477832; // Desmond Mack — Executive Search Director
+// (Owen Bewry 91705318 — kept for reference)
+const NURTURE_OWNER = USER_DESMOND;
 
 // Sub-200 attendance strings we should route to Owen for nurture
 function isSubTwoHundred(attendance) {
@@ -73,7 +75,7 @@ function pickField(body, ...names) {
 async function createContact(token, data) {
   const subTwoHundred = isSubTwoHundred(data.attendance);
   const commentPrefix = subTwoHundred
-    ? `🔵 NURTURE — Small Church (Under 200) — Assigned to Owen. `
+    ? `🔵 NURTURE — Small Church (Under 200) — Assigned to Desmond. `
     : "";
   const columnValues = {
     [CC_FIRST]: data.first,
@@ -84,7 +86,7 @@ async function createContact(token, data) {
     [CC_COMMENTS]: `${commentPrefix}Auto-created from GHL webhook. Source: ${data.source}. Attendance: ${data.attendance || "n/a"}. Position: ${data.position || "n/a"}. Timeline: ${data.timeline || "n/a"}.`,
   };
   if (subTwoHundred) {
-    columnValues[CC_OWNERSHIP] = { personsAndTeams: [{ id: USER_OWEN, kind: "person" }] };
+    columnValues[CC_OWNERSHIP] = { personsAndTeams: [{ id: NURTURE_OWNER, kind: "person" }] };
   }
   if (data.email) columnValues[CC_EMAIL] = { email: data.email, text: data.email };
   if (data.phone)
