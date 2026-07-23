@@ -131,7 +131,14 @@ async function createDeal(token, data) {
     columnValues[LD_CONTACT_LINK] = { item_ids: [Number(data.contactItemId)] };
   }
 
-  const dealName = `${data.first} ${data.last} — ${data.church}`.trim() || "PPC lead";
+  const role = (data.position || "").trim();
+  const church = (data.church || "").trim();
+  const nameFallback = `${data.first || ""} ${data.last || ""}`.trim();
+  let dealName;
+  if (role && church)      dealName = `${role} @ ${church}`;
+  else if (church)         dealName = `??? @ ${church}`;
+  else if (role)           dealName = `${role} — ${nameFallback}`.trim();
+  else                     dealName = nameFallback || "PPC lead";
   const mutation = `
     mutation ($board: ID!, $name: String!, $cols: JSON!) {
       create_item(board_id: $board, item_name: $name, column_values: $cols, create_labels_if_missing: true) {
@@ -266,6 +273,7 @@ module.exports = async function handler(req, res) {
       first,
       last,
       church,
+      position,
       contactItemId: contactId,
       sourceLabel,
     });
