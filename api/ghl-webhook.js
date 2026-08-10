@@ -65,15 +65,17 @@ function isSubTwoHundred(attendance) {
 
 // Map a free-text attendance string to a NEW board Attendance status label.
 // Mirrors mapAttendance() in migrate-to-new-boards.mjs.
+// Bug fixed 2026-08-10: STRING patterns are checked BEFORE numeric extraction.
+// Previously "under 200" would match the "200" digit and return "200-499".
 function mapAttendance(sizeText) {
   if (!sizeText) return "Unknown";
   const s = String(sizeText).trim().toLowerCase().replace(/,/g, "");
+  // Check qualitative string patterns FIRST (before numeric extraction)
+  if (s.includes("under 200") || s.includes("less than 200") || s.includes("< 200") || s.includes("<200")) return "< 200";
+  if (s.includes("2500+") || s.includes("2500 +") || s.includes("2,500+") || s.includes("over 2500") || s.includes("more than 2500")) return "2,500+";
+  // Then try numeric extraction
   const m = s.match(/(\d+)/);
-  if (!m) {
-    if (s.includes("under 200") || s.includes("< 200") || s.includes("<200")) return "< 200";
-    if (s.includes("2500+") || s.includes("2500 +")) return "2,500+";
-    return "Unknown";
-  }
+  if (!m) return "Unknown";
   const n = Number(m[1]);
   if (n < 200)   return "< 200";
   if (n < 500)   return "200 - 499";
@@ -247,6 +249,23 @@ module.exports = async function handler(req, res) {
 
   // Body — Vercel serverless auto-parses JSON if Content-Type is application/json
   const body = req.body || {};
+
+  // === PAYLOAD DEBUG LOGGING (added 2026-08-10) ===
+  // Log full raw payload so we can see GHL's actual field structure.
+  // Vercel captures console.log at Deployments → Logs. Search for "GHL_PAYLOAD".
+  // Once we see 2-3 real payloads, we'll know the exact custom-field IDs to map.
+  console.log("GHL_PAYLOAD_START", JSON.stringify({
+    top_level_keys: Object.keys(body),
+    contact_keys: body?.contact ? Object.keys(body.contact) : null,
+    custom_fields_shape: body?.contact?.custom_fields
+      ? (Array.isArray(body.contact.custom_fields)
+          ? { type: "array", length: body.contact.custom_fields.length, sample: body.contact.custom_fields.slice(0, 2) }
+          : { type: "object", keys: Object.keys(body.contact.custom_fields) })
+      : (body?.custom_fields ? "top-level custom_fields exists" : "none"),
+    full_payload: body,
+  }));
+  console.log("GHL_PAYLOAD_END");
+  // === END DEBUG LOGGING ===
 
   const first = pickField(
     body,
