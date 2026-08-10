@@ -174,7 +174,14 @@ function pickCustomField(body, fieldId) {
 async function mondayMutate(token, mutation, variables) {
   const res = await fetch(MONDAY_API, {
     method: "POST",
-    headers: { Authorization: token, "Content-Type": "application/json" },
+    headers: {
+      Authorization: token,
+      "Content-Type": "application/json",
+      // API-Version 2025-04 is required for board_relation column writes.
+      // Prior 2024-01 default silently rejected board_relation writes with
+      // no error; column value would stay null. Bumped 2026-08-10.
+      "API-Version": "2025-04",
+    },
     body: JSON.stringify({ query: mutation, variables }),
   });
   const json = await res.json();
@@ -247,14 +254,11 @@ async function createLead(token, data) {
   };
   if (data.position) columnValues[LD_ROLE]   = data.position;
   if (data.church)   columnValues[LD_CHURCH] = data.church;
-  // Contact Point (LD_CONTACT_LINK / board_relation_mm5wpr99) intentionally
-  // skipped — Monday column config is broken (see comment on constant above).
+  // Contact Point (LD_CONTACT_LINK / board_relation_mm5wpr99) — REQUIRES
+  // API-Version 2025-04 on the mutation. Prior versions silently rejected
+  // the write with no error. Bumped mondayMutate() to 2025-04 on 2026-08-10.
   if (data.contactItemId) {
-    console.log(
-      `[known-gap] Contact Point column ${LD_CONTACT_LINK} not written for lead. ` +
-      `Client Contact created at Monday itemId=${data.contactItemId}. ` +
-      `Ops (Kylie) must fix Monday column config; then re-enable link write.`,
-    );
+    columnValues[LD_CONTACT_LINK] = { item_ids: [Number(data.contactItemId)] };
   }
   // NO owner, NO Client Manager assignment — SMs claim from Fresh group.
 
