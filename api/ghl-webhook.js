@@ -21,6 +21,54 @@
  */
 
 const MONDAY_API = "https://api.monday.com/v2";
+const GHL_API = "https://services.leadconnectorhq.com";
+const GHL_API_VERSION = "2021-07-28";
+
+// GHL custom field IDs (verified via /locations/customFields query 2026-08-10).
+// The webhook payload from GHL's Custom Webhook action sometimes omits customFields
+// or sends them in a shape we can't parse. Fetching /contacts/{id} directly
+// returns the full record with customFields as [{id, value}]. This guarantees
+// role/church/attendance/timeline land on every Monday item.
+const GHL_CF_POSITION   = "GEUd0b8wdH15F3Lx1URs";
+const GHL_CF_CHURCH     = "w0sm9wpx7ODNrmJfqq9Q";
+const GHL_CF_ATTENDANCE = "p4pYMUi5AsSoy6sGlH0w";
+const GHL_CF_TIMELINE   = "H2R6Qkt2dDGICqv0SLRl";
+const GHL_CF_LOCATION   = "YqPGLHhoyynXXf3bPfVs";
+
+/**
+ * Fetch the full GHL contact record by ID. Guarantees customFields presence.
+ * Requires GHL_TOKEN env var (Bearer). Returns null on failure.
+ */
+async function ghlFetchContact(contactId) {
+  if (!contactId) return null;
+  const token = process.env.GHL_TOKEN;
+  if (!token) { console.warn("[ghl] GHL_TOKEN env var not set — cannot enrich contact"); return null; }
+  try {
+    const r = await fetch(`${GHL_API}/contacts/${contactId}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Version": GHL_API_VERSION,
+        "Accept": "application/json",
+      },
+    });
+    if (!r.ok) {
+      console.warn(`[ghl] contact fetch ${contactId} HTTP ${r.status}`);
+      return null;
+    }
+    const body = await r.json();
+    return body.contact || body || null;
+  } catch (e) {
+    console.warn(`[ghl] contact fetch ${contactId} threw:`, e.message);
+    return null;
+  }
+}
+
+/** Read a specific customField value by id from a GHL contact record. */
+function ghlGetCF(contact, cfId) {
+  if (!contact || !Array.isArray(contact.customFields)) return null;
+  const match = contact.customFields.find(f => f.id === cfId);
+  return match?.value ?? null;
+}
 
 // ---- NEW-BOARD IDS (post-2026-08-03 migration) --------------------------
 const CLIENT_CONTACTS_BOARD = 18424840911;   // "Client Contacts [NEW]"
@@ -59,12 +107,7 @@ const LD_DEMOGRAPHIC   = "long_text_mm5hrgzb";
 // fix the Monday column config in the UI. Until then we skip the write and
 // log a note; SMs can link contacts manually.
 
-// GHL custom-field IDs (verified from /tmp/ghl-39-full-contacts.json).
-const GHL_CF_POSITION   = "GEUd0b8wdH15F3Lx1URs";
-const GHL_CF_CHURCH     = "w0sm9wpx7ODNrmJfqq9Q";
-const GHL_CF_ATTENDANCE = "p4pYMUi5AsSoy6sGlH0w";
-const GHL_CF_TIMELINE   = "H2R6Qkt2dDGICqv0SLRl";
-const GHL_CF_LOCATION   = "YqPGLHhoyynXXf3bPfVs";
+// (GHL custom-field IDs declared above with the ghlFetchContact helper.)
 
 // Sub-200 attendance strings that used to route to Owen/Desmond nurture on
 // the OLD system. Kept as a flag so we can prefix the Demographic field to
@@ -358,44 +401,38 @@ module.exports = async function handler(req, res) {
   const email = pickField(body, "email", "contact.email");
   const phone = pickField(body, "phone", "contact.phone");
 
-  // Church / position / attendance / timeline live in GHL custom fields.
-  // Fall back to any top-level flat field GHL might send under a friendly name,
-  // but prefer the custom_fields ID (verified from cache 2026-08-10).
+  // CRITICAL: GHL's Custom Webhook payload frequently OMITS customFields entirely,
+  // even when the fields are populated on the contact. Verified 2026-08-10 with
+  // Alberto Pedroso — payload had zero customFields, but /contacts/{id} returned
+  // position/attendance/timeline all populated. Always fetch the full contact
+  // from GHL by ID to guarantee we have the data. Falls back to payload if the
+  // fetch fails (missing GHL_TOKEN, network error, etc.).
+  const ghlContactId =
+    pickField(body, "contact_id", "contactId", "contact.id", "id");
+  const ghlContact = ghlContactId ? await ghlFetchContact(ghlContactId) : null;
+  if (ghlContact) {
+    console.log(`[ghl] enriched from /contacts/${ghlContactId} — customFields: ${(ghlContact.customFields || []).length}`);
+  } else if (ghlContactId) {
+    console.warn(`[ghl] failed to enrich contact ${ghlContactId} — falling back to webhook payload`);
+  }
+
+  // Read custom fields — prefer the fetched full contact, fall back to payload.
   const church =
+    ghlGetCF(ghlContact, GHL_CF_CHURCH) ||
     pickCustomField(body, GHL_CF_CHURCH) ||
-    pickField(
-      body,
-      "company_name",
-      "companyName",
-      "contact.company_name",
-      "contact.companyName",
-      "organization",
-    );
+    pickField(body, "company_name", "companyName", "contact.company_name", "contact.companyName", "organization");
   const position =
+    ghlGetCF(ghlContact, GHL_CF_POSITION) ||
     pickCustomField(body, GHL_CF_POSITION) ||
-    pickField(
-      body,
-      "position",
-      "position_hiring_for",
-      "contact.position_hiring_for",
-    );
+    pickField(body, "position", "position_hiring_for", "contact.position_hiring_for");
   const attendance =
+    ghlGetCF(ghlContact, GHL_CF_ATTENDANCE) ||
     pickCustomField(body, GHL_CF_ATTENDANCE) ||
-    pickField(
-      body,
-      "attendance",
-      "weekly_attendance",
-      "contact.weekly_attendance",
-      "contact.attendance",
-    );
+    pickField(body, "attendance", "weekly_attendance", "contact.weekly_attendance", "contact.attendance");
   const timeline =
+    ghlGetCF(ghlContact, GHL_CF_TIMELINE) ||
     pickCustomField(body, GHL_CF_TIMELINE) ||
-    pickField(
-      body,
-      "timeline",
-      "ideal_timeline",
-      "contact.ideal_timeline",
-    );
+    pickField(body, "timeline", "ideal_timeline", "contact.ideal_timeline");
 
   const rawSource = pickField(body, "source", "contact.source", "trigger");
   const sourceLabel = "PPC Ads";
