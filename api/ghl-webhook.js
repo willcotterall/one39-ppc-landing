@@ -42,17 +42,29 @@ const CC_DATE   = "date_mm5qpsjf";
 // nurture routing needs to be re-automated.
 
 // NEW Leads board column IDs
-const LD_STAGE       = "color_mm5hdya4";
-const LD_SOURCE      = "color_mm5hjwrs";
-const LD_DATE        = "date_mm5hc955";
-const LD_FIT         = "color_mm5h71sj";
-const LD_INTERESTED  = "color_mm5hv1k0";
-const LD_TIMELINE    = "color_mm5hjjxz";
-const LD_ATTENDANCE  = "color_mm5he334";
-const LD_ROLE        = "text_mm5hcd2d";
-const LD_CHURCH      = "text_mm5h11je";
-const LD_DEMOGRAPHIC = "long_text_mm5hrgzb";
-const LD_CONTACT_LINK = "board_relation_mm5wpr99";   // Contact Point → Client Contacts [NEW]
+const LD_STAGE         = "color_mm5hdya4";
+const LD_SOURCE        = "color_mm5hjwrs";
+const LD_DATE          = "date_mm5hc955";
+const LD_LAST_ACTIVITY = "date_mm5hz4qb";
+const LD_FIT           = "color_mm5h71sj";
+const LD_INTERESTED    = "color_mm5hv1k0";
+const LD_TIMELINE      = "color_mm5hjjxz";
+const LD_ATTENDANCE    = "color_mm5he334";
+const LD_ROLE          = "text_mm5hcd2d";
+const LD_CHURCH        = "text_mm5h11je";
+const LD_DEMOGRAPHIC   = "long_text_mm5hrgzb";
+// LD_CONTACT_LINK ("board_relation_mm5wpr99") intentionally NOT written here.
+// Monday-side config bug: this column silently rejects all API writes across
+// every tested payload shape (item_ids, linkedPulseIds, etc). Ops (Kylie) must
+// fix the Monday column config in the UI. Until then we skip the write and
+// log a note; SMs can link contacts manually.
+
+// GHL custom-field IDs (verified from /tmp/ghl-39-full-contacts.json).
+const GHL_CF_POSITION   = "GEUd0b8wdH15F3Lx1URs";
+const GHL_CF_CHURCH     = "w0sm9wpx7ODNrmJfqq9Q";
+const GHL_CF_ATTENDANCE = "p4pYMUi5AsSoy6sGlH0w";
+const GHL_CF_TIMELINE   = "H2R6Qkt2dDGICqv0SLRl";
+const GHL_CF_LOCATION   = "YqPGLHhoyynXXf3bPfVs";
 
 // Sub-200 attendance strings that used to route to Owen/Desmond nurture on
 // the OLD system. Kept as a flag so we can prefix the Demographic field to
@@ -84,6 +96,20 @@ function mapAttendance(sizeText) {
   return "2,500+";
 }
 
+// Map a free-text timeline string to a NEW board Timeline status label.
+// String patterns are checked in specificity order. Blank / unmapped → "Unknown".
+function mapTimeline(text) {
+  if (!text) return "Unknown";
+  const s = String(text).trim().toLowerCase();
+  if (!s) return "Unknown";
+  if (/(asap|immediately|urgent|right away|\bnow\b)/.test(s)) return "ASAP";
+  if (/(1\s*-\s*3|1\s*to\s*3|1\s*–\s*3|within 3|next month|few weeks)/.test(s)) return "1 - 3 months";
+  if (/(3\s*-\s*6|3\s*to\s*6|3\s*–\s*6|quarter|few months)/.test(s)) return "3 - 6 months";
+  if (/(6\s*-\s*12|6\s*to\s*12|6\s*–\s*12|next year|6\+\s*months|6\s*months\+)/.test(s)) return "6 - 12 months";
+  if (/(someday|no rush|not soon|later|just exploring|exploring)/.test(s)) return "Someday";
+  return "Unknown";
+}
+
 function todayISO() {
   const d = new Date();
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
@@ -106,6 +132,41 @@ function pickField(body, ...names) {
       cur = cur && typeof cur === "object" ? cur[p] : undefined;
     }
     if (typeof cur === "string" && cur.trim()) return cur.trim();
+  }
+  return "";
+}
+
+/**
+ * Read a GHL custom field by its field-ID. GHL sends custom fields in several
+ * possible shapes depending on webhook config:
+ *   1) Array of {id, value} objects   — canonical shape from GHL v2 API
+ *   2) Object keyed by field-ID       — flat map, seen in some payloads
+ *   3) Top-level customField[<id>]    — legacy shape
+ * We try all shapes and return the first non-empty match.
+ */
+function pickCustomField(body, fieldId) {
+  const containers = [
+    body?.contact?.customFields,
+    body?.contact?.custom_fields,
+    body?.customFields,
+    body?.custom_fields,
+  ];
+  for (const c of containers) {
+    if (!c) continue;
+    if (Array.isArray(c)) {
+      // Array shape: [{ id, value }, ...]
+      const hit = c.find((f) => f && (f.id === fieldId || f.key === fieldId));
+      if (hit) {
+        const v = hit.value ?? hit.fieldValue ?? hit.fieldValueString;
+        if (typeof v === "string" && v.trim()) return v.trim();
+        if (typeof v === "number") return String(v);
+      }
+    } else if (typeof c === "object") {
+      // Object shape: { <fieldId>: value }
+      const v = c[fieldId];
+      if (typeof v === "string" && v.trim()) return v.trim();
+      if (typeof v === "number") return String(v);
+    }
   }
   return "";
 }
@@ -157,34 +218,43 @@ async function createContact(token, data) {
 }
 
 async function createLead(token, data) {
-  const subTwoHundred = isSubTwoHundred(data.attendance);
   const attendanceLabel = mapAttendance(data.attendance);
+  const timelineLabel   = mapTimeline(data.timeline);
 
-  // Build Demographic blob — carries the free-text context (source, timeline,
-  // sub-200 flag) that used to live on the OLD contact's Comments column.
-  const demoParts = [];
-  demoParts.push(`Auto-created from GHL webhook on ${todayISO()}`);
-  demoParts.push(`Source: ${data.source || "PPC Ads"}`);
-  if (data.attendance) demoParts.push(`Attendance (raw): ${data.attendance}`);
-  if (data.position)   demoParts.push(`Position: ${data.position}`);
-  if (data.timeline)   demoParts.push(`Timeline (raw): ${data.timeline}`);
-  if (subTwoHundred)   demoParts.push(`⚠ SUB-200 CHURCH — was routed to Desmond nurture on old system.`);
-  const demographic = demoParts.join(" · ");
+  // Build clean Demographic blob per Will's 2026-08-10 spec.
+  // Raw-value fields only — no GHL contact ID, no email/phone (those belong to
+  // the linked Contact Point when Kylie fixes the Monday column), no auto-noise,
+  // no sub-200 nurture line (nurture is a manual SM decision now).
+  const q = (v) => `"${String(v || "").replace(/"/g, '\\"')}"`;
+  const demographic =
+    `PPC lead via Meta ad. ` +
+    `Position (raw): ${q(data.position)}, ` +
+    `Church (raw): ${q(data.church)}, ` +
+    `Attendance (raw): ${q(data.attendance)}, ` +
+    `Timeline (raw): ${q(data.timeline)}. ` +
+    `Contact via linked Contact Point.`;
 
   const columnValues = {
-    [LD_STAGE]:      { label: "New" },
-    [LD_SOURCE]:     { label: data.sourceLabel || "PPC Ads" },
-    [LD_DATE]:       { date: todayISO() },
-    [LD_FIT]:        { label: "Unknown" },
-    [LD_INTERESTED]: { label: "Unknown" },
-    [LD_TIMELINE]:   { label: "Someday" },
-    [LD_ATTENDANCE]: { label: attendanceLabel },
-    [LD_DEMOGRAPHIC]: demographic,
+    [LD_STAGE]:         { label: "New" },
+    [LD_SOURCE]:        { label: "PPC Ads" },
+    [LD_DATE]:          { date: todayISO() },
+    [LD_LAST_ACTIVITY]: { date: todayISO() },
+    [LD_FIT]:           { label: "Unknown" },
+    [LD_INTERESTED]:    { label: "Interested" },
+    [LD_TIMELINE]:      { label: timelineLabel },
+    [LD_ATTENDANCE]:    { label: attendanceLabel },
+    [LD_DEMOGRAPHIC]:   demographic,
   };
-  if (data.position)     columnValues[LD_ROLE]   = data.position;
-  if (data.church)       columnValues[LD_CHURCH] = data.church;
+  if (data.position) columnValues[LD_ROLE]   = data.position;
+  if (data.church)   columnValues[LD_CHURCH] = data.church;
+  // Contact Point (LD_CONTACT_LINK / board_relation_mm5wpr99) intentionally
+  // skipped — Monday column config is broken (see comment on constant above).
   if (data.contactItemId) {
-    columnValues[LD_CONTACT_LINK] = { item_ids: [Number(data.contactItemId)] };
+    console.log(
+      `[known-gap] Contact Point column ${LD_CONTACT_LINK} not written for lead. ` +
+      `Client Contact created at Monday itemId=${data.contactItemId}. ` +
+      `Ops (Kylie) must fix Monday column config; then re-enable link write.`,
+    );
   }
   // NO owner, NO Client Manager assignment — SMs claim from Fresh group.
 
@@ -283,36 +353,48 @@ module.exports = async function handler(req, res) {
   );
   const email = pickField(body, "email", "contact.email");
   const phone = pickField(body, "phone", "contact.phone");
-  const church = pickField(
-    body,
-    "company_name",
-    "companyName",
-    "contact.company_name",
-    "contact.companyName",
-    "organization",
-  );
+
+  // Church / position / attendance / timeline live in GHL custom fields.
+  // Fall back to any top-level flat field GHL might send under a friendly name,
+  // but prefer the custom_fields ID (verified from cache 2026-08-10).
+  const church =
+    pickCustomField(body, GHL_CF_CHURCH) ||
+    pickField(
+      body,
+      "company_name",
+      "companyName",
+      "contact.company_name",
+      "contact.companyName",
+      "organization",
+    );
+  const position =
+    pickCustomField(body, GHL_CF_POSITION) ||
+    pickField(
+      body,
+      "position",
+      "position_hiring_for",
+      "contact.position_hiring_for",
+    );
+  const attendance =
+    pickCustomField(body, GHL_CF_ATTENDANCE) ||
+    pickField(
+      body,
+      "attendance",
+      "weekly_attendance",
+      "contact.weekly_attendance",
+      "contact.attendance",
+    );
+  const timeline =
+    pickCustomField(body, GHL_CF_TIMELINE) ||
+    pickField(
+      body,
+      "timeline",
+      "ideal_timeline",
+      "contact.ideal_timeline",
+    );
+
   const rawSource = pickField(body, "source", "contact.source", "trigger");
-  const sourceLabel =
-    rawSource && !/ppc/i.test(rawSource) ? rawSource : "PPC Ads";
-  const attendance = pickField(
-    body,
-    "attendance",
-    "weekly_attendance",
-    "contact.weekly_attendance",
-    "contact.attendance",
-  );
-  const position = pickField(
-    body,
-    "position",
-    "position_hiring_for",
-    "contact.position_hiring_for",
-  );
-  const timeline = pickField(
-    body,
-    "timeline",
-    "ideal_timeline",
-    "contact.ideal_timeline",
-  );
+  const sourceLabel = "PPC Ads";
 
   if (!first && !last && !email && !phone) {
     return res
