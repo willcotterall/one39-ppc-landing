@@ -70,6 +70,75 @@ function ghlGetCF(contact, cfId) {
   return match?.value ?? null;
 }
 
+/**
+ * Use Anthropic + web_search to produce a REAL demographic writeup for a church.
+ * Returns {demographic: string, city: string|null, state: string|null} or null on failure.
+ * Requires ANTHROPIC_API_KEY env var. Budget: ~15-30s.
+ *
+ * This replaces the old "metadata dump" demographic. Now the Demographic column
+ * describes the CHURCH itself — denomination, size, pastor tenure, culture, etc.
+ */
+async function anthropicEnrichChurch(church, city, state, role) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) { console.warn("[anthropic] ANTHROPIC_API_KEY not set — skipping enrichment"); return null; }
+  if (!church) return null;
+
+  const locHint = [city, state].filter(Boolean).join(", ");
+  const userPrompt = `Research this church and return a short demographic profile suitable for a pastoral search firm's CRM.
+
+Church: ${church}${locHint ? ` (${locHint})` : ""}${role ? `\nOpen role: ${role}` : ""}
+
+Use web_search to verify. Return valid JSON only, no prose wrapper:
+{
+  "demographic": "2-4 sentence description of the church: denomination, size, pastor + tenure, notable programs, culture. Ends with a source-verification note.",
+  "city": "city name (empty string if unknown)",
+  "state": "2-letter state code (empty string if unknown)"
+}
+
+Rules:
+- Only fill city/state if you have 99% confidence from web search
+- Demographic should be factual and specific, not generic
+- If church cannot be verified online at all, return demographic="Unable to verify church online — SM should confirm during discovery call." and city/state empty
+- No fabrication`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5",
+        max_tokens: 1024,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
+        messages: [{ role: "user", content: userPrompt }],
+      }),
+    });
+    if (!res.ok) {
+      console.warn(`[anthropic] HTTP ${res.status} — enrichment skipped`);
+      return null;
+    }
+    const body = await res.json();
+    // Extract text from the last text block
+    const textBlocks = (body.content || []).filter(b => b.type === "text");
+    const text = textBlocks.map(b => b.text).join("\n").trim();
+    // Parse JSON (may be wrapped in ```json)
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) { console.warn("[anthropic] no JSON in response"); return null; }
+    const parsed = JSON.parse(match[0]);
+    return {
+      demographic: parsed.demographic || null,
+      city: parsed.city || null,
+      state: parsed.state || null,
+    };
+  } catch (e) {
+    console.warn("[anthropic] enrichment failed:", e.message);
+    return null;
+  }
+}
+
 // ---- NEW-BOARD IDS (post-2026-08-03 migration) --------------------------
 const CLIENT_CONTACTS_BOARD = 18424840911;   // "Client Contacts [NEW]"
 const LEADS_BOARD           = 18424840901;   // "Leads [NEW]"
@@ -100,6 +169,8 @@ const LD_TIMELINE      = "color_mm5hjjxz";
 const LD_ATTENDANCE    = "color_mm5he334";
 const LD_ROLE          = "text_mm5hcd2d";
 const LD_CHURCH        = "text_mm5h11je";
+const LD_CITY          = "text_mm5hke00";
+const LD_STATE         = "text_mm5h5vzx";
 const LD_DEMOGRAPHIC   = "long_text_mm5hrgzb";
 // LD_CONTACT_LINK ("board_relation_mm5wpr99") intentionally NOT written here.
 // Monday-side config bug: this column silently rejects all API writes across
@@ -271,18 +342,23 @@ async function createLead(token, data) {
   const attendanceLabel = mapAttendance(data.attendance);
   const timelineLabel   = mapTimeline(data.timeline);
 
-  // Build clean Demographic blob per Will's 2026-08-10 spec.
-  // Raw-value fields only — no GHL contact ID, no email/phone (those belong to
-  // the linked Contact Point when Kylie fixes the Monday column), no auto-noise,
-  // no sub-200 nurture line (nurture is a manual SM decision now).
-  const q = (v) => `"${String(v || "").replace(/"/g, '\\"')}"`;
-  const demographic =
-    `PPC lead via Meta ad. ` +
-    `Position (raw): ${q(data.position)}, ` +
-    `Church (raw): ${q(data.church)}, ` +
-    `Attendance (raw): ${q(data.attendance)}, ` +
-    `Timeline (raw): ${q(data.timeline)}. ` +
-    `Contact via linked Contact Point.`;
+  // Demographic column now holds the CHURCH DEMOGRAPHIC (Will 2026-08-10 rule
+  // change) — not metadata about the lead record. Fetched via Anthropic +
+  // web_search. Falls back to a placeholder if enrichment fails or is skipped.
+  // City/State also come from this enrichment when the form didn't collect them.
+  let demographic = data.church
+    ? `Church demographic pending enrichment — SM should verify.`
+    : `Church name missing on form — SM to collect during discovery call.`;
+  let enrichedCity = data.city || null;
+  let enrichedState = data.state || null;
+  try {
+    const enrichment = await anthropicEnrichChurch(data.church, data.city, data.state, data.position);
+    if (enrichment?.demographic) demographic = enrichment.demographic;
+    if (!enrichedCity && enrichment?.city) enrichedCity = enrichment.city;
+    if (!enrichedState && enrichment?.state) enrichedState = enrichment.state;
+  } catch (e) {
+    console.warn("[enrich] church enrichment threw:", e.message);
+  }
 
   const columnValues = {
     [LD_STAGE]:         { label: "New" },
@@ -295,8 +371,10 @@ async function createLead(token, data) {
     [LD_ATTENDANCE]:    { label: attendanceLabel },
     [LD_DEMOGRAPHIC]:   demographic,
   };
-  if (data.position) columnValues[LD_ROLE]   = data.position;
-  if (data.church)   columnValues[LD_CHURCH] = data.church;
+  if (data.position)  columnValues[LD_ROLE]   = data.position;
+  if (data.church)    columnValues[LD_CHURCH] = data.church;
+  if (enrichedCity)   columnValues[LD_CITY]   = enrichedCity;
+  if (enrichedState)  columnValues[LD_STATE]  = enrichedState;
   // Contact Point (LD_CONTACT_LINK / board_relation_mm5wpr99) — REQUIRES
   // API-Version 2025-04 on the mutation. Prior versions silently rejected
   // the write with no error. Bumped mondayMutate() to 2025-04 on 2026-08-10.
@@ -437,6 +515,11 @@ module.exports = async function handler(req, res) {
   const rawSource = pickField(body, "source", "contact.source", "trigger");
   const sourceLabel = "PPC Ads";
 
+  // City + state — added to the form 2026-08-10. Read from payload if GHL
+  // passes them through. Enrichment can fill these later if blank.
+  const city  = pickField(body, "city", "contact.city");
+  const state = pickField(body, "state", "contact.state");
+
   if (!first && !last && !email && !phone) {
     return res
       .status(400)
@@ -449,6 +532,8 @@ module.exports = async function handler(req, res) {
     church,
     phone,
     email,
+    city,
+    state,
     source: rawSource || sourceLabel,
     sourceLabel,
     attendance,
