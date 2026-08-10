@@ -71,6 +71,43 @@ function ghlGetCF(contact, cfId) {
 }
 
 /**
+ * Detect obviously suspicious / low-quality leads via heuristics on the lead's
+ * name and email. Returns a warning string if suspicious, else null.
+ * Signals: inappropriate email prefixes, gibberish names, test strings, etc.
+ */
+function detectSuspicious(first, last, email, church) {
+  const flags = [];
+  const emailLower = (email || "").toLowerCase();
+  const nameLower = `${first || ""} ${last || ""}`.toLowerCase().trim();
+  const churchLower = (church || "").toLowerCase();
+
+  // Inappropriate email tokens
+  const badTokens = ["ballbusting", "porn", "sex", "fuck", "shit", "asshole", "cunt", "nigger", "test", "asdf", "qwerty", "spam", "trash", "garbage"];
+  for (const t of badTokens) {
+    if (emailLower.includes(t)) flags.push(`email contains "${t}"`);
+    if (nameLower.includes(t)) flags.push(`name contains "${t}"`);
+  }
+  // Numeric-heavy email prefix (e.g., "user123456789@gmail.com")
+  const emailPrefix = emailLower.split("@")[0] || "";
+  if (/^\d{4,}$/.test(emailPrefix) || (/\d{6,}/.test(emailPrefix) && emailPrefix.length < 15)) {
+    flags.push("email prefix is mostly digits");
+  }
+  // Gibberish name detection (consonant clusters, no vowels)
+  if (nameLower && !/[aeiouy]/i.test(nameLower.replace(/\s/g, ""))) {
+    flags.push("name has no vowels");
+  }
+  // Very short single-letter names
+  if (first && first.length === 1 && last && last.length <= 2) {
+    flags.push("name is suspiciously short");
+  }
+  // Church name looks like a test/placeholder
+  if (churchLower.match(/^(test|asdf|xxx|zzz|abc|123)/i)) {
+    flags.push(`church name looks like a placeholder: "${church}"`);
+  }
+  return flags.length ? flags : null;
+}
+
+/**
  * Use Anthropic + web_search to produce a REAL demographic writeup for a church.
  * Returns {demographic: string, city: string|null, state: string|null} or null on failure.
  * Requires ANTHROPIC_API_KEY env var. Budget: ~15-30s.
@@ -346,14 +383,19 @@ async function createLead(token, data) {
   // change) — not metadata about the lead record. Fetched via Anthropic +
   // web_search. Falls back to a placeholder if enrichment fails or is skipped.
   // City/State also come from this enrichment when the form didn't collect them.
+  // Prepend a suspicious-lead warning if we detect obvious signals.
+  const suspicious = detectSuspicious(data.first, data.last, data.email, data.church);
+  const suspiciousPrefix = suspicious
+    ? `⚠ SUSPICIOUS LEAD FLAG: ${suspicious.join("; ")}. This may not be a high-quality lead — SM should verify authenticity before spending time.\n\n`
+    : "";
   let demographic = data.church
-    ? `Church demographic pending enrichment — SM should verify.`
-    : `Church name missing on form — SM to collect during discovery call.`;
+    ? `${suspiciousPrefix}Church demographic pending enrichment — SM should verify.`
+    : `${suspiciousPrefix}Church name missing on form — SM to collect during discovery call.`;
   let enrichedCity = data.city || null;
   let enrichedState = data.state || null;
   try {
     const enrichment = await anthropicEnrichChurch(data.church, data.city, data.state, data.position);
-    if (enrichment?.demographic) demographic = enrichment.demographic;
+    if (enrichment?.demographic) demographic = suspiciousPrefix + enrichment.demographic;
     if (!enrichedCity && enrichment?.city) enrichedCity = enrichment.city;
     if (!enrichedState && enrichment?.state) enrichedState = enrichment.state;
   } catch (e) {
