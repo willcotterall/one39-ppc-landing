@@ -393,11 +393,23 @@ async function createLead(token, data) {
     : `${suspiciousPrefix}Church name missing on form — SM to collect during discovery call.`;
   let enrichedCity = data.city || null;
   let enrichedState = data.state || null;
+  // Race the enrichment against a 25s timeout — Vercel serverless kills at
+  // 60s and we need time for Monday writes after this. If Anthropic takes
+  // longer, the Lead still ships with placeholder demographic. Root-cause
+  // fix for Aug 11 issue: JoAnn/Darren Logan contacts created 5x but Lead
+  // never landed because Anthropic web_search timed out the whole function.
   try {
-    const enrichment = await anthropicEnrichChurch(data.church, data.city, data.state, data.position);
-    if (enrichment?.demographic) demographic = suspiciousPrefix + enrichment.demographic;
-    if (!enrichedCity && enrichment?.city) enrichedCity = enrichment.city;
-    if (!enrichedState && enrichment?.state) enrichedState = enrichment.state;
+    const enrichment = await Promise.race([
+      anthropicEnrichChurch(data.church, data.city, data.state, data.position),
+      new Promise((resolve) => setTimeout(() => resolve({ __timeout: true }), 25000)),
+    ]);
+    if (enrichment?.__timeout) {
+      console.warn("[enrich] Anthropic enrichment timed out at 25s — shipping Lead with placeholder demographic");
+    } else if (enrichment) {
+      if (enrichment.demographic) demographic = suspiciousPrefix + enrichment.demographic;
+      if (!enrichedCity && enrichment.city) enrichedCity = enrichment.city;
+      if (!enrichedState && enrichment.state) enrichedState = enrichment.state;
+    }
   } catch (e) {
     console.warn("[enrich] church enrichment threw:", e.message);
   }
