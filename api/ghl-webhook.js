@@ -209,7 +209,11 @@ const LD_CHURCH        = "text_mm5h11je";
 const LD_CITY          = "text_mm5hke00";
 const LD_STATE         = "text_mm5h5vzx";
 const LD_DEMOGRAPHIC   = "long_text_mm5hrgzb";
-// LD_CONTACT_LINK ("board_relation_mm5wpr99") intentionally NOT written here.
+const LD_CONTACT_LINK  = "board_relation_mm5wpr99";
+// (2026-08-17: const re-declared — an 8/10 refactor deleted the declaration but
+// kept the usage below, a latent ReferenceError that the enrichment timeout had
+// been masking. Older stale note said this column was "intentionally NOT written";
+// that predates the 8/10 API-Version 2025-04 bump which made the write work.)
 // Monday-side config bug: this column silently rejects all API writes across
 // every tested payload shape (item_ids, linkedPulseIds, etc). Ops (Kylie) must
 // fix the Monday column config in the UI. Until then we skip the write and
@@ -537,7 +541,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-17-dedupe-6s",
+      version: "2026-08-17-contactlink-fix",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
