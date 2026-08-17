@@ -340,6 +340,59 @@ async function mondayMutate(token, mutation, variables) {
   return { ok: true, data: json.data };
 }
 
+/**
+ * Idempotency guards (added 2026-08-17). GHL retries the webhook when it gets
+ * no timely 2xx, which used to create up to 5 duplicate contacts per lead.
+ * Before creating, look for a matching row created in the last 48h and reuse
+ * it. Failures return null (= no match) so a guard error can never block a
+ * lead from landing.
+ */
+const DEDUPE_WINDOW_MS = 48 * 3600 * 1000;
+
+async function findRecentContactByEmail(token, email) {
+  if (!email) return null;
+  const query = `
+    query ($board: ID!) {
+      boards(ids: [$board]) {
+        items_page(limit: 50, query_params: {order_by: [{column_id: "__creation_log__", direction: desc}]}) {
+          items { id created_at column_values(ids: ["${CC_EMAIL}"]) { text } }
+        }
+      }
+    }
+  `;
+  const r = await mondayMutate(token, query, { board: String(CLIENT_CONTACTS_BOARD) });
+  if (!r.ok) { console.warn("[dedupe] contact lookup failed:", JSON.stringify(r.errors).slice(0, 200)); return null; }
+  const items = r.data?.boards?.[0]?.items_page?.items || [];
+  const cutoff = Date.now() - DEDUPE_WINDOW_MS;
+  const hit = items.find(
+    (it) =>
+      new Date(it.created_at).getTime() > cutoff &&
+      (it.column_values?.[0]?.text || "").trim().toLowerCase() === email.trim().toLowerCase()
+  );
+  return hit?.id ?? null;
+}
+
+async function findRecentLeadByName(token, name) {
+  if (!name) return null;
+  const query = `
+    query ($board: ID!) {
+      boards(ids: [$board]) {
+        items_page(limit: 50, query_params: {order_by: [{column_id: "__creation_log__", direction: desc}]}) {
+          items { id name created_at }
+        }
+      }
+    }
+  `;
+  const r = await mondayMutate(token, query, { board: String(LEADS_BOARD) });
+  if (!r.ok) { console.warn("[dedupe] lead lookup failed:", JSON.stringify(r.errors).slice(0, 200)); return null; }
+  const items = r.data?.boards?.[0]?.items_page?.items || [];
+  const cutoff = Date.now() - DEDUPE_WINDOW_MS;
+  const hit = items.find(
+    (it) => new Date(it.created_at).getTime() > cutoff && it.name.trim().toLowerCase() === name.trim().toLowerCase()
+  );
+  return hit?.id ?? null;
+}
+
 async function createContact(token, data) {
   const columnValues = {
     [CC_DATE]: { date: todayISO() },
@@ -393,18 +446,21 @@ async function createLead(token, data) {
     : `${suspiciousPrefix}Church name missing on form — SM to collect during discovery call.`;
   let enrichedCity = data.city || null;
   let enrichedState = data.state || null;
-  // Race the enrichment against a 25s timeout — Vercel serverless kills at
-  // 60s and we need time for Monday writes after this. If Anthropic takes
-  // longer, the Lead still ships with placeholder demographic. Root-cause
-  // fix for Aug 11 issue: JoAnn/Darren Logan contacts created 5x but Lead
-  // never landed because Anthropic web_search timed out the whole function.
+  // Race the enrichment against a 6s timeout. 2026-08-17 root cause of the
+  // 8/12-8/17 outage (Clinton→Preston, 8 leads dropped): the previous 25s
+  // race NEVER resolves because Vercel's DEFAULT maxDuration (10s) killed
+  // the whole function mid-race — contact row landed, Lead write never ran,
+  // GHL got no response and retried 5x (hence 5x duplicate contacts).
+  // 6s keeps total runtime under 10s even if vercel.json maxDuration=60
+  // (added same day) doesn't take effect on this plan. If Anthropic needs
+  // longer, the Lead ships with placeholder demographic — SMs verify.
   try {
     const enrichment = await Promise.race([
       anthropicEnrichChurch(data.church, data.city, data.state, data.position),
-      new Promise((resolve) => setTimeout(() => resolve({ __timeout: true }), 25000)),
+      new Promise((resolve) => setTimeout(() => resolve({ __timeout: true }), 6000)),
     ]);
     if (enrichment?.__timeout) {
-      console.warn("[enrich] Anthropic enrichment timed out at 25s — shipping Lead with placeholder demographic");
+      console.warn("[enrich] Anthropic enrichment timed out at 6s — shipping Lead with placeholder demographic");
     } else if (enrichment) {
       if (enrichment.demographic) demographic = suspiciousPrefix + enrichment.demographic;
       if (!enrichedCity && enrichment.city) enrichedCity = enrichment.city;
@@ -446,6 +502,14 @@ async function createLead(token, data) {
   else if (role)           leadName = `${role} — ${nameFallback}`.trim();
   else                     leadName = nameFallback || "PPC lead";
 
+  // Idempotency: if a GHL retry already produced this lead in the last 48h,
+  // return the existing row instead of creating a duplicate.
+  const existingLead = await findRecentLeadByName(token, leadName);
+  if (existingLead) {
+    console.log(`[dedupe] lead "${leadName}" already exists (${existingLead}) — skipping create`);
+    return existingLead;
+  }
+
   const mutation = `
     mutation ($board: ID!, $group: String!, $name: String!, $cols: JSON!) {
       create_item(board_id: $board, group_id: $group, item_name: $name, column_values: $cols, create_labels_if_missing: true) {
@@ -473,6 +537,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
+      version: "2026-08-17-dedupe-6s",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -595,8 +660,15 @@ module.exports = async function handler(req, res) {
     timeline,
   };
 
-  // Always create the Contact row first (so we can link the Lead to it)
-  const contactId = await createContact(mondayToken, data);
+  // Always create the Contact row first (so we can link the Lead to it).
+  // Idempotency: reuse a contact created in the last 48h with the same email
+  // (GHL retry protection — see findRecentContactByEmail).
+  let contactId = await findRecentContactByEmail(mondayToken, email);
+  if (contactId) {
+    console.log(`[dedupe] contact for ${email} already exists (${contactId}) — skipping create`);
+  } else {
+    contactId = await createContact(mondayToken, data);
+  }
 
   // Always create a Lead row on the NEW board too — Will's directive
   // 2026-08-05: every PPC lead goes to the new board. Fresh group, no

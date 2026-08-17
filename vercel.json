@@ -1,4 +1,9 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "functions": {
+    "api/ghl-webhook.js": {
+      "maxDuration": 60
+    }
+  }
 }
