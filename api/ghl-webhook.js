@@ -34,6 +34,7 @@ const GHL_CF_CHURCH     = "w0sm9wpx7ODNrmJfqq9Q";
 const GHL_CF_ATTENDANCE = "p4pYMUi5AsSoy6sGlH0w";
 const GHL_CF_TIMELINE   = "H2R6Qkt2dDGICqv0SLRl";
 const GHL_CF_LOCATION   = "YqPGLHhoyynXXf3bPfVs";
+const GHL_LOCATION_ID   = process.env.GHL_LOCATION_ID || "l9GVEA91SsaZzg0pNW61";
 
 /**
  * Fetch the full GHL contact record by ID. Guarantees customFields presence.
@@ -68,6 +69,33 @@ function ghlGetCF(contact, cfId) {
   if (!contact || !Array.isArray(contact.customFields)) return null;
   const match = contact.customFields.find(f => f.id === cfId);
   return match?.value ?? null;
+}
+
+/**
+ * FALLBACK LOOKUP (added 2026-08-19). The contact-by-id fetch silently returns
+ * a record without customFields in some cases (verified live: leads 8/17-8/19
+ * all landed with church empty even though GHL held the value). Searching by
+ * email hits a different endpoint that reliably returns customFields.
+ * Returns the first matching contact or null.
+ */
+async function ghlFindContactByEmail(email) {
+  if (!email) return null;
+  const token = process.env.GHL_TOKEN;
+  if (!token) return null;
+  try {
+    const url = `${GHL_API}/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(email)}`;
+    const r = await fetch(url, {
+      headers: { "Authorization": `Bearer ${token}`, "Version": GHL_API_VERSION, "Accept": "application/json" },
+    });
+    if (!r.ok) { console.warn(`[ghl] email search HTTP ${r.status} for ${email}`); return null; }
+    const body = await r.json();
+    const hit = (body.contacts || [])[0] || null;
+    if (hit) console.log(`[ghl] email-search fallback matched ${hit.id} (customFields: ${(hit.customFields || []).length})`);
+    return hit;
+  } catch (e) {
+    console.warn(`[ghl] email search threw:`, e.message);
+    return null;
+  }
 }
 
 /**
@@ -541,7 +569,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-17-contactlink-fix",
+      version: "2026-08-19-email-fallback",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -618,20 +646,33 @@ module.exports = async function handler(req, res) {
   }
 
   // Read custom fields — prefer the fetched full contact, fall back to payload.
+  // If the by-id fetch came back without usable custom fields, fall back to an
+  // email search before reading any field. Added 2026-08-19 after every PPC lead
+  // from 8/17-8/19 landed with church empty while GHL held the value.
+  let ghlSource = ghlContact;
+  const idFetchUsable = ghlGetCF(ghlContact, GHL_CF_CHURCH) || ghlGetCF(ghlContact, GHL_CF_POSITION);
+  if (!idFetchUsable && email) {
+    const byEmail = await ghlFindContactByEmail(email);
+    if (byEmail && (byEmail.customFields || []).length) {
+      ghlSource = byEmail;
+      console.log(`[ghl] using email-search record for ${email} (id-fetch had no custom fields)`);
+    }
+  }
+
   const church =
-    ghlGetCF(ghlContact, GHL_CF_CHURCH) ||
+    ghlGetCF(ghlSource, GHL_CF_CHURCH) ||
     pickCustomField(body, GHL_CF_CHURCH) ||
     pickField(body, "company_name", "companyName", "contact.company_name", "contact.companyName", "organization");
   const position =
-    ghlGetCF(ghlContact, GHL_CF_POSITION) ||
+    ghlGetCF(ghlSource, GHL_CF_POSITION) ||
     pickCustomField(body, GHL_CF_POSITION) ||
     pickField(body, "position", "position_hiring_for", "contact.position_hiring_for");
   const attendance =
-    ghlGetCF(ghlContact, GHL_CF_ATTENDANCE) ||
+    ghlGetCF(ghlSource, GHL_CF_ATTENDANCE) ||
     pickCustomField(body, GHL_CF_ATTENDANCE) ||
     pickField(body, "attendance", "weekly_attendance", "contact.weekly_attendance", "contact.attendance");
   const timeline =
-    ghlGetCF(ghlContact, GHL_CF_TIMELINE) ||
+    ghlGetCF(ghlSource, GHL_CF_TIMELINE) ||
     pickCustomField(body, GHL_CF_TIMELINE) ||
     pickField(body, "timeline", "ideal_timeline", "contact.ideal_timeline");
 
@@ -640,8 +681,8 @@ module.exports = async function handler(req, res) {
 
   // City + state — added to the form 2026-08-10. Read from payload if GHL
   // passes them through. Enrichment can fill these later if blank.
-  const city  = pickField(body, "city", "contact.city");
-  const state = pickField(body, "state", "contact.state");
+  const city  = pickField(body, "city", "contact.city") || (ghlSource && ghlSource.city) || "";
+  const state = pickField(body, "state", "contact.state") || (ghlSource && ghlSource.state) || "";
 
   if (!first && !last && !email && !phone) {
     return res
