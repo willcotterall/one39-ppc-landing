@@ -36,6 +36,40 @@ const GHL_CF_TIMELINE   = "H2R6Qkt2dDGICqv0SLRl";
 const GHL_CF_LOCATION   = "YqPGLHhoyynXXf3bPfVs";
 const GHL_LOCATION_ID   = process.env.GHL_LOCATION_ID || "l9GVEA91SsaZzg0pNW61";
 
+// ROOT CAUSE, found 2026-08-20. GHL sits behind Cloudflare, which rejects
+// requests that carry no User-Agent with 403 "error 1010" (client banned) —
+// NOT rate limiting, and NOT an auth failure, so the token looked fine.
+// Node's native fetch sends no User-Agent by default, so EVERY GHL lookup from
+// this function had been silently 403ing. Attendance/timeline still landed
+// because those arrive in the webhook payload; church and role exist only on
+// the contact record, so they came back empty on every PPC lead.
+// Verified: identical request 403s without this header, 200s with it.
+const GHL_UA = "Mozilla/5.0 (compatible; One39-PPC-Webhook/1.0; +https://hire.one39.co)";
+
+function ghlHeaders(token) {
+  return {
+    "Authorization": `Bearer ${token}`,
+    "Version": GHL_API_VERSION,
+    "Accept": "application/json",
+    "User-Agent": GHL_UA,
+  };
+}
+
+/** GET against GHL with one retry, since Cloudflare occasionally 403s a cold call. */
+async function ghlGet(url, token, label) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(url, { headers: ghlHeaders(token) });
+      if (r.ok) return await r.json();
+      console.warn(`[ghl] ${label} HTTP ${r.status}${attempt ? "" : " — retrying"}`);
+    } catch (e) {
+      console.warn(`[ghl] ${label} threw: ${e.message}${attempt ? "" : " — retrying"}`);
+    }
+    if (attempt === 0) await new Promise(r => setTimeout(r, 600));
+  }
+  return null;
+}
+
 /**
  * Fetch the full GHL contact record by ID. Guarantees customFields presence.
  * Requires GHL_TOKEN env var (Bearer). Returns null on failure.
@@ -44,24 +78,9 @@ async function ghlFetchContact(contactId) {
   if (!contactId) return null;
   const token = process.env.GHL_TOKEN;
   if (!token) { console.warn("[ghl] GHL_TOKEN env var not set — cannot enrich contact"); return null; }
-  try {
-    const r = await fetch(`${GHL_API}/contacts/${contactId}`, {
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Version": GHL_API_VERSION,
-        "Accept": "application/json",
-      },
-    });
-    if (!r.ok) {
-      console.warn(`[ghl] contact fetch ${contactId} HTTP ${r.status}`);
-      return null;
-    }
-    const body = await r.json();
-    return body.contact || body || null;
-  } catch (e) {
-    console.warn(`[ghl] contact fetch ${contactId} threw:`, e.message);
-    return null;
-  }
+  const body = await ghlGet(`${GHL_API}/contacts/${contactId}`, token, `contact fetch ${contactId}`);
+  if (!body) return null;
+  return body.contact || body || null;
 }
 
 /** Read a specific customField value by id from a GHL contact record. */
@@ -82,20 +101,12 @@ async function ghlFindContactByEmail(email) {
   if (!email) return null;
   const token = process.env.GHL_TOKEN;
   if (!token) return null;
-  try {
-    const url = `${GHL_API}/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(email)}`;
-    const r = await fetch(url, {
-      headers: { "Authorization": `Bearer ${token}`, "Version": GHL_API_VERSION, "Accept": "application/json" },
-    });
-    if (!r.ok) { console.warn(`[ghl] email search HTTP ${r.status} for ${email}`); return null; }
-    const body = await r.json();
-    const hit = (body.contacts || [])[0] || null;
-    if (hit) console.log(`[ghl] email-search fallback matched ${hit.id} (customFields: ${(hit.customFields || []).length})`);
-    return hit;
-  } catch (e) {
-    console.warn(`[ghl] email search threw:`, e.message);
-    return null;
-  }
+  const url = `${GHL_API}/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(email)}`;
+  const body = await ghlGet(url, token, `email search ${email}`);
+  if (!body) return null;
+  const hit = (body.contacts || [])[0] || null;
+  if (hit) console.log(`[ghl] email-search fallback matched ${hit.id} (customFields: ${(hit.customFields || []).length})`);
+  return hit;
 }
 
 /**
@@ -267,6 +278,11 @@ function mapAttendance(sizeText) {
   const s = String(sizeText).trim().toLowerCase().replace(/,/g, "");
   // Check qualitative string patterns FIRST (before numeric extraction)
   if (s.includes("under 200") || s.includes("less than 200") || s.includes("< 200") || s.includes("<200")) return "< 200";
+  // "Under 500" is a legacy GHL form option with no exact board bucket. Numeric
+  // extraction below would read the 500 and wrongly return "500 - 999", which is
+  // the one answer it definitely is not. 200 - 499 is the widest bucket fully
+  // contained under 500.
+  if (s.includes("under 500") || s.includes("less than 500")) return "200 - 499";
   if (s.includes("2500+") || s.includes("2500 +") || s.includes("2,500+") || s.includes("over 2500") || s.includes("more than 2500")) return "2,500+";
   // Then try numeric extraction
   const m = s.match(/(\d+)/);
@@ -569,7 +585,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-19-email-fallback",
+      version: "2026-08-20-cloudflare-ua-fix",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -657,6 +673,13 @@ module.exports = async function handler(req, res) {
       ghlSource = byEmail;
       console.log(`[ghl] using email-search record for ${email} (id-fetch had no custom fields)`);
     }
+  }
+
+  // Church and role exist ONLY on the contact record, never in the webhook
+  // payload. If both lookups came back unusable the lead will land bare, which
+  // is exactly the failure that went unnoticed 8/17-8/20. Shout about it.
+  if (!ghlSource || !(ghlSource.customFields || []).length) {
+    console.error(`[ghl] ALARM: no custom fields for ${email || "(no email)"} — church/role will be EMPTY. Check GHL_TOKEN and Cloudflare 403s.`);
   }
 
   const church =
