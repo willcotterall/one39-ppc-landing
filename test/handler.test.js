@@ -136,7 +136,10 @@ async function run({ ghlCustomFields, searchCustomFields, existingItems, payload
   eq(r.leadCols?.text_mm5hcd2d, "Lead / Senior Pastor", "Role column filled from payload");
   eq(r.leadCols?.color_mm5hjjxz?.label, "6 - 12 months", "Timeline mapped from payload");
   eq(r.leadCols?.color_mm5he334?.label, "1,000 - 2,499", "Attendance mapped from payload");
-  falsy(r.leadCols?.long_text_mm5hrgzb?.includes?.("ENRICHMENT GAP"), "no gap banner when everything resolved");
+  // Church IS required on both forms as of 8/21, so its absence is a real gap.
+  truthy(r.leadCols?.long_text_mm5hrgzb?.includes("ENRICHMENT GAP"), "gap banner fires for the missing church");
+  truthy(r.leadCols?.long_text_mm5hrgzb?.includes("church"), "banner names church");
+  falsy(r.leadCols?.long_text_mm5hrgzb?.includes("timeline"), "timeline is OPTIONAL on the form — must not be flagged");
   truthy(r.contactCreated, "Client Contacts row still created");
   eq(r.res.code, 200, "returns 200 so GHL does not retry");
 
@@ -352,6 +355,42 @@ async function run({ ghlCustomFields, searchCustomFields, existingItems, payload
                email: "ab@example.org", phone: "+15555556666" },
   });
   falsy(rJunk.leadCols?.text_mm5hke00, "unparseable Location leaves City blank, not garbage");
+
+  // ── Scenario 4h — same person, DIFFERENT opening, inside the window ──────
+  // A church's shared inbox can legitimately submit twice for two different
+  // roles. Keying dedupe on the contact alone discarded the second one.
+  console.log("\n4h. Same contact + different role still creates a second lead");
+  const rSecond = await run({
+    ghlCustomFields: [
+      { id: CF.role, value: "Youth Pastor" },
+      { id: CF.church, value: "Grace Chapel" },
+    ],
+    existingItems: [{
+      id: "333", name: "Worship Pastor @ Grace Chapel",       // a DIFFERENT opening
+      created_at: new Date(Date.now() - 3600 * 1000).toISOString(),
+      column_values: [{ linked_item_ids: ["CONTACT1"] }],     // SAME contact
+    }],
+    payload: { contact_id: "TESTCONTACT", first_name: "Shared", last_name: "Inbox",
+               email: "office@gracechapel.org", phone: "+15551230000" },
+  });
+  eq(rSecond.leadName, "Youth Pastor @ Grace Chapel", "the new opening");
+  truthy(rSecond.leadCols, "second lead for a different role was NOT swallowed");
+
+  console.log("\n4i. A true GHL retry — same contact AND same title — is deduped");
+  const rTrue = await run({
+    ghlCustomFields: [
+      { id: CF.role, value: "Youth Pastor" },
+      { id: CF.church, value: "Grace Chapel" },
+    ],
+    existingItems: [{
+      id: "444", name: "Youth Pastor @ Grace Chapel",
+      created_at: new Date(Date.now() - 300 * 1000).toISOString(),
+      column_values: [{ linked_item_ids: ["CONTACT1"] }],
+    }],
+    payload: { contact_id: "TESTCONTACT", first_name: "Shared", last_name: "Inbox",
+               email: "office@gracechapel.org", phone: "+15551230000" },
+  });
+  falsy(rTrue.leadCols, "identical retry did not duplicate");
 
   // ── Scenario 5 — response diagnostics ─────────────────────────────────────
   console.log("\n5. Response carries diagnostics but never lead PII");

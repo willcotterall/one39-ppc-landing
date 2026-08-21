@@ -58,23 +58,6 @@ const GHL_LOCATION_ID   = process.env.GHL_LOCATION_ID || "l9GVEA91SsaZzg0pNW61";
 // Keep an honest, attributable UA so a future 1010 can actually be traced to us.
 const GHL_UA = "One39-PPC-Webhook/1.0 (+https://hire.one39.co)";
 
-/**
- * Dry-run auth. Gated on DIAG_TOKEN, which is a separate secret from
- * WEBHOOK_SECRET and lives only in Vercel env. Lets us exercise the REAL
- * handler against REAL GHL data in the REAL runtime and see exactly what would
- * land on monday — without writing a junk row onto a client's live board.
- * With DIAG_TOKEN unset, this is dead code.
- */
-function isDryRun(req) {
-  const supplied = req?.query?.dry;
-  const expected = process.env.DIAG_TOKEN;
-  if (!expected || !supplied) return false;
-  const a = Buffer.from(String(supplied));
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return require("crypto").timingSafeEqual(a, b);
-}
-
 function ghlHeaders(token) {
   return {
     "Authorization": `Bearer ${token}`,
@@ -188,7 +171,12 @@ async function ghlFindContactByEmail(email, trace = []) {
   const url = `${GHL_API}/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(email)}`;
   const body = await ghlGet(url, token, "byEmail", respHasCF, trace);
   if (!body) return null;
-  const hit = (body.contacts || [])[0] || null;
+  // GHL's `query=` is a SUBSTRING search, not an email filter — query="gmail.com"
+  // returns everyone. Taking [0] could graft a stranger's church, role and
+  // free-text notes onto this lead. Verify exactly, the way the phone twin does.
+  const want = String(email).trim().toLowerCase();
+  const hit = (body.contacts || []).find(
+    c => String(c.email || "").trim().toLowerCase() === want) || null;
   if (hit) console.log(`[ghl] email-search fallback matched ${hit.id} (customFields: ${(hit.customFields || []).length})`);
   return hit;
 }
@@ -484,6 +472,19 @@ const DIRECTIONALS = new Set(["n","s","e","w","ne","nw","se","sw","north","south
  * Returns {city, state}, either of which may be "" — a wrong city is worse
  * than a blank one, so anything unrecognised yields nothing.
  */
+/**
+ * "TX" / "tx" / "Texas" -> "TX". Anything unrecognised returns "".
+ * The previous normalizer was .toUpperCase().slice(0,2), which silently turned
+ * Texas into TE, Arizona into AR and Maine into MA.
+ */
+function normalizeState(v) {
+  const t = String(v || "").trim();
+  if (!t) return "";
+  if (/^[A-Za-z]{2}$/.test(t) && STATE_CODES.has(t.toUpperCase())) return t.toUpperCase();
+  const code = US_STATES[t.toLowerCase()];
+  return code || "";
+}
+
 function parseLocation(raw) {
   let t = String(raw || "").trim().replace(/\s+/g, " ");
   if (!t) return { city: "", state: "" };
@@ -675,7 +676,14 @@ async function findRecentContactByEmail(token, email) {
 }
 
 /**
- * Dedupe a lead by the contact it links to, not by its title.
+ * Dedupe a lead on BOTH the linked contact AND the title.
+ *
+ * Contact alone is wrong: one person, or a shared church inbox, can legitimately
+ * submit twice inside 48h for two DIFFERENT openings, and keying on the contact
+ * discards the second one. Title alone is wrong too: "Role — ???" is generic by
+ * construction and collides across different people. A genuine GHL retry carries
+ * both the same contact and the same title, so requiring both keeps idempotency
+ * while letting real second leads through.
  *
  * Name-based dedupe was safe while every title embedded the person's name. As
  * of 2026-08-21 an unknown church renders as "Role — ???", so two different
@@ -683,7 +691,7 @@ async function findRecentContactByEmail(token, email) {
  * and the second one would have been silently swallowed as a duplicate. The
  * linked Client Contacts row is unique per person, so it is the correct key.
  */
-async function findRecentLeadByContact(token, contactItemId) {
+async function findRecentLeadByContact(token, contactItemId, leadName) {
   if (!contactItemId) return null;
   const query = `
     query ($board: ID!) {
@@ -706,7 +714,8 @@ async function findRecentLeadByContact(token, contactItemId) {
   const want = String(contactItemId);
   const hit = items.find((it) =>
     new Date(it.created_at).getTime() > cutoff &&
-    (it.column_values?.[0]?.linked_item_ids || []).map(String).includes(want)
+    (it.column_values?.[0]?.linked_item_ids || []).map(String).includes(want) &&
+    it.name.trim().toLowerCase() === String(leadName || "").trim().toLowerCase()
   );
   return hit?.id ?? null;
 }
@@ -806,18 +815,22 @@ async function createLead(token, data) {
     ? `⚠ SUSPICIOUS LEAD FLAG: ${suspicious.join("; ")}. This may not be a high-quality lead — SM should verify authenticity before spending time.\n\n`
     : "";
   let demographic = data.church
-    ? `${suspiciousPrefix}Church demographic pending enrichment — SM should verify.`
+    ? `${suspiciousPrefix}No church profile on file — SM to research before the call.`
     : `${suspiciousPrefix}Church name missing on form — SM to collect during discovery call.`;
 
-  // Enrichment-gap banner. Church is deliberately NOT in this list: it is
-  // optional on the form, so a church-less lead is normal and flagging it would
-  // make the banner noise from day one. Role, attendance and timeline are all
-  // required questions, so any of those missing means enrichment genuinely
-  // failed and the SM is looking at an incomplete row.
+  // Enrichment-gap banner. This list must track what the FORM actually
+  // requires, or it cries wolf. As of 2026-08-21 both forms require church,
+  // role, attendance, city and state; timeline and notes are optional. So a
+  // missing timeline is a normal lead, not a failure — flagging it would fire
+  // on healthy rows and train SMs to ignore the one visible warning we have.
+  //
+  // City/State are also excluded, for a different reason: they are required on
+  // the form but GHL has nowhere to store them, so they are missing on every
+  // single lead until that mapping exists. See the runbook.
   const missing = [];
   if (!data.position)   missing.push("role");
+  if (!data.church)     missing.push("church");
   if (!data.attendance) missing.push("attendance");
-  if (!data.timeline)   missing.push("timeline");
   // The banner itself is applied AFTER the Anthropic enrichment below, which
   // reassigns `demographic` and would otherwise wipe it.
   let enrichedCity = data.city || null;
@@ -830,17 +843,32 @@ async function createLead(token, data) {
   // 6s keeps total runtime under 10s even if vercel.json maxDuration=60
   // (added same day) doesn't take effect on this plan. If Anthropic needs
   // longer, the Lead ships with placeholder demographic — SMs verify.
+  // DISABLED IN-BAND 2026-08-21. This raced Anthropic+web_search against 6s.
+  // Measured actual latency for this exact model/prompt/tools config: 9.6s,
+  // 11.0s, 12.6s, 13.2s, 14.5s, 14.7s — the fastest run is 1.8x the cap, so the
+  // race has NEVER been won. Every Demographic since 8/17 has been the
+  // placeholder, while each lead still burned ~40k input tokens and held GHL's
+  // connection for 6s (Promise.race does not abort the fetch).
+  //
+  // Raising the cap is not the fix: holding the connection 15-20s recreates the
+  // retry storm that caused the 8/12-8/17 outage. Enrichment belongs off the
+  // request path. Set ENRICH_IN_BAND=1 to re-enable with a longer budget.
+  const enrichBudgetMs = Number(process.env.ENRICH_BUDGET_MS || 0);
   try {
-    const enrichment = await Promise.race([
+    const enrichment = enrichBudgetMs <= 0 ? null : await Promise.race([
       anthropicEnrichChurch(data.church, data.city, data.state, data.position),
-      new Promise((resolve) => setTimeout(() => resolve({ __timeout: true }), 6000)),
+      new Promise((resolve) => setTimeout(() => resolve({ __timeout: true }), enrichBudgetMs)),
     ]);
     if (enrichment?.__timeout) {
       console.warn("[enrich] Anthropic enrichment timed out at 6s — shipping Lead with placeholder demographic");
     } else if (enrichment) {
       if (enrichment.demographic) demographic = suspiciousPrefix + enrichment.demographic;
-      if (!enrichedCity && enrichment.city) enrichedCity = enrichment.city;
-      if (!enrichedState && enrichment.state) enrichedState = enrichment.state;
+      // Normalize exactly like collected values, and mark them as inferred so an
+      // SM can tell a guess from an answer. Note the live State column already
+      // holds "Tennessee" AND "TN", plus "IL (assumed)", from unnormalized
+      // output — do not add to it.
+      if (!enrichedCity && enrichment.city) enrichedCity = String(enrichment.city).trim();
+      if (!enrichedState && enrichment.state) enrichedState = normalizeState(enrichment.state);
     }
   } catch (e) {
     console.warn("[enrich] church enrichment threw:", e.message);
@@ -899,10 +927,7 @@ async function createLead(token, data) {
   // Prefer the linked contact — unique per person. Fall back to the title only
   // when it is specific enough to identify one lead: a title containing "???"
   // is generic by construction and would collide across different people.
-  let existingLead = await findRecentLeadByContact(token, data.contactItemId);
-  if (!existingLead && !leadName.includes("???")) {
-    existingLead = await findRecentLeadByName(token, leadName);
-  }
+  const existingLead = await findRecentLeadByContact(token, data.contactItemId, leadName);
   if (existingLead) {
     console.log(`[dedupe] lead "${leadName}" already exists (${existingLead}) — skipping create`);
     return existingLead;
@@ -935,7 +960,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-21-location-parser",
+      version: "2026-08-21-review-fixes",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -944,18 +969,14 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Secret check. A dry run authenticates with DIAG_TOKEN instead and writes
-  // nothing, so it never needs the production webhook secret.
-  const dryRun = isDryRun(req);
-  if (!dryRun) {
-    const providedSecret = req.query.secret;
-    const expectedSecret = process.env.WEBHOOK_SECRET;
-    if (!expectedSecret) {
-      return res.status(500).json({ error: "Server missing WEBHOOK_SECRET" });
-    }
-    if (providedSecret !== expectedSecret) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+  // Secret check.
+  const providedSecret = req.query.secret;
+  const expectedSecret = process.env.WEBHOOK_SECRET;
+  if (!expectedSecret) {
+    return res.status(500).json({ error: "Server missing WEBHOOK_SECRET" });
+  }
+  if (providedSecret !== expectedSecret) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   const mondayToken = process.env.MONDAY_TOKEN;
@@ -966,22 +987,9 @@ module.exports = async function handler(req, res) {
   // Body — Vercel serverless auto-parses JSON if Content-Type is application/json
   const body = req.body || {};
 
-  // === PAYLOAD DEBUG LOGGING (added 2026-08-10) ===
-  // Log full raw payload so we can see GHL's actual field structure.
-  // Vercel captures console.log at Deployments → Logs. Search for "GHL_PAYLOAD".
-  // Once we see 2-3 real payloads, we'll know the exact custom-field IDs to map.
-  console.log("GHL_PAYLOAD_START", JSON.stringify({
-    top_level_keys: Object.keys(body),
-    contact_keys: body?.contact ? Object.keys(body.contact) : null,
-    custom_fields_shape: body?.contact?.custom_fields
-      ? (Array.isArray(body.contact.custom_fields)
-          ? { type: "array", length: body.contact.custom_fields.length, sample: body.contact.custom_fields.slice(0, 2) }
-          : { type: "object", keys: Object.keys(body.contact.custom_fields) })
-      : (body?.custom_fields ? "top-level custom_fields exists" : "none"),
-    full_payload: body,
-  }));
-  console.log("GHL_PAYLOAD_END");
-  // === END DEBUG LOGGING ===
+  // Raw-payload logging removed 2026-08-21: it dumped every lead's PII into the
+  // runtime logs, and `diag.payloadKeys` on the response answers the same
+  // question (which keys GHL actually sends) without the contents.
 
   const first = pickField(
     body,
@@ -1030,7 +1038,15 @@ module.exports = async function handler(req, res) {
   // The old gate looked only at church and position. A candidate can legitimately
   // have neither (church is optional on the form), so a perfectly good record
   // carrying attendance and timeline was thrown away and a round trip wasted.
-  const CF_IDS = [GHL_CF_CHURCH, GHL_CF_POSITION, GHL_CF_ATTENDANCE, GHL_CF_TIMELINE];
+  // Every field we read, not just the primary four. Second-funnel contacts have
+  // none of the primaries, so a SUCCESSFUL fetch was being thrown away and
+  // re-fetched twice — and the trace printed onto the board said the id lookup
+  // had failed when it had not.
+  const CF_IDS = [
+    GHL_CF_CHURCH, GHL_CF_POSITION, GHL_CF_ATTENDANCE, GHL_CF_TIMELINE,
+    GHL_CF_ORG_NAME, GHL_CF_WANT_HIRE, GHL_CF_JOB_TITLE,
+    GHL_CF_NOTES, GHL_CF_ANYTHING, GHL_CF_ORG_TYPE, GHL_CF_LOCATION,
+  ];
   const hasAnyCF = (c) => !!c && Array.isArray(c.customFields) && CF_IDS.some(id => ghlGetCF(c, id));
 
   let ghlSource = ghlContact;
@@ -1066,7 +1082,7 @@ module.exports = async function handler(req, res) {
   // names, and the Title Case forms a human might type into the GHL webhook
   // action. Note church previously had NO church_name alias at all, so it
   // could only ever come from the contact record, never the payload.
-  const A_POSITION = ["position", "role", "position_hiring_for", "contact.position_hiring_for", "Position Hiring For", "job_title"];
+  const A_POSITION = ["position", "role", "position_hiring_for", "contact.position_hiring_for", "Position Hiring For"];  // NOT job_title — that is the submitter's own title
   const A_CHURCH   = ["church", "church_name", "contact.church_name", "Church Name", "company_name", "companyName", "contact.company_name", "contact.companyName", "organization"];
   const A_ATTEND   = ["attendance", "weekly_attendance", "contact.weekly_attendance", "contact.attendance", "Weekly Attendance", "average_attendance"];
   const A_TIMELINE = ["timeline", "ideal_timeline", "contact.ideal_timeline", "Ideal Timeline", "hiring_timeline"];
@@ -1141,7 +1157,7 @@ module.exports = async function handler(req, res) {
     if (!city && parsed.city) city = parsed.city;
     if (!state && parsed.state) state = parsed.state;
   }
-  if (state) state = state.trim().toUpperCase().slice(0, 2);
+  state = normalizeState(state);
 
   if (!first && !last && !email && !phone) {
     return res
@@ -1172,34 +1188,6 @@ module.exports = async function handler(req, res) {
     jobTitle,
   };
 
-  if (dryRun) {
-    // Everything above ran for real — payload parsing, the GHL lookups, field
-    // resolution, mapping, naming. Only the two monday writes are skipped.
-    return res.status(200).json({
-      dryRun: true,
-      wouldCreateLeadNamed: buildLeadName(data),
-      resolved: {
-        role: data.position || null,
-        church: data.church || null,
-        city: data.city || null,
-        state: data.state || null,
-        attendance: mapAttendance(data.attendance),
-        timeline: mapTimeline(data.timeline),
-        jobTitle: data.jobTitle || null,
-        notes: data.leadNotes || null,
-        orgType: data.orgType || null,
-      },
-      ghl: {
-        contactIdSeen: !!ghlContactId,
-        emailSeen: !!email,
-        phoneSeen: !!phone,
-        cfCount: (ghlSource?.customFields || []).length,
-        trace: ghlTrace,
-      },
-      payloadKeys: Object.keys(body || {}).slice(0, 40),
-    });
-  }
-
   // Always create the Contact row first (so we can link the Lead to it).
   // Idempotency: reuse a contact created in the last 48h with the same email
   // (GHL retry protection — see findRecentContactByEmail).
@@ -1227,7 +1215,12 @@ module.exports = async function handler(req, res) {
   // board showed the gap. Shout about it. Still 200 — a retry would duplicate
   // the contact row that already succeeded (that was Bug 1).
   if (contactId && !leadId) {
-    console.error(`[monday] ALARM: contact ${contactId} written but LEAD WRITE FAILED — lead is lost. trace: ${ghlTrace.join(" | ")}`);
+    // Returning 200 here told GHL "success" and the lead was gone for good.
+    // The original rationale — that a retry would duplicate the contact row —
+    // is obsolete: findRecentContactByEmail now reuses it, and the lead dedupe
+    // finds nothing to collide with. Let GHL retry.
+    console.error(`[monday] ALARM: contact ${contactId} written but LEAD WRITE FAILED. trace: ${ghlTrace.join(" | ")}`);
+    return res.status(502).json({ error: "Lead write failed", contactId });
   }
 
   return res.status(200).json({
