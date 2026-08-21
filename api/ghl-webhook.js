@@ -583,6 +583,43 @@ async function findRecentContactByEmail(token, email) {
   return hit?.id ?? null;
 }
 
+/**
+ * Dedupe a lead by the contact it links to, not by its title.
+ *
+ * Name-based dedupe was safe while every title embedded the person's name. As
+ * of 2026-08-21 an unknown church renders as "Role — ???", so two different
+ * candidates hiring the same role with no church produce an IDENTICAL title —
+ * and the second one would have been silently swallowed as a duplicate. The
+ * linked Client Contacts row is unique per person, so it is the correct key.
+ */
+async function findRecentLeadByContact(token, contactItemId) {
+  if (!contactItemId) return null;
+  const query = `
+    query ($board: ID!) {
+      boards(ids: [$board]) {
+        items_page(limit: 50, query_params: {order_by: [{column_id: "__creation_log__", direction: desc}]}) {
+          items {
+            id name created_at
+            column_values(ids: ["${LD_CONTACT_LINK}"]) {
+              ... on BoardRelationValue { linked_item_ids }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const r = await mondayMutate(token, query, { board: String(LEADS_BOARD) });
+  if (!r.ok) { console.warn("[dedupe] lead-by-contact lookup failed:", JSON.stringify(r.errors).slice(0, 200)); return null; }
+  const items = r.data?.boards?.[0]?.items_page?.items || [];
+  const cutoff = Date.now() - DEDUPE_WINDOW_MS;
+  const want = String(contactItemId);
+  const hit = items.find((it) =>
+    new Date(it.created_at).getTime() > cutoff &&
+    (it.column_values?.[0]?.linked_item_ids || []).map(String).includes(want)
+  );
+  return hit?.id ?? null;
+}
+
 async function findRecentLeadByName(token, name) {
   if (!name) return null;
   const query = `
@@ -768,7 +805,13 @@ async function createLead(token, data) {
 
   // Idempotency: if a GHL retry already produced this lead in the last 48h,
   // return the existing row instead of creating a duplicate.
-  const existingLead = await findRecentLeadByName(token, leadName);
+  // Prefer the linked contact — unique per person. Fall back to the title only
+  // when it is specific enough to identify one lead: a title containing "???"
+  // is generic by construction and would collide across different people.
+  let existingLead = await findRecentLeadByContact(token, data.contactItemId);
+  if (!existingLead && !leadName.includes("???")) {
+    existingLead = await findRecentLeadByName(token, leadName);
+  }
   if (existingLead) {
     console.log(`[dedupe] lead "${leadName}" already exists (${existingLead}) — skipping create`);
     return existingLead;
@@ -801,7 +844,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-21-dryrun-and-jobtitle",
+      version: "2026-08-21-dedupe-by-contact",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });

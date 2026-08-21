@@ -50,7 +50,7 @@ const CF = {
  * @param ghlCustomFields  array to return from the GHL contact lookup, or null
  *                         to simulate the lookup yielding nothing usable
  */
-function installFetchMock({ ghlCustomFields, searchCustomFields }) {
+function installFetchMock({ ghlCustomFields, searchCustomFields, existingItems }) {
   const mondayCalls = [];
   global.fetch = async (url, opts = {}) => {
     const u = String(url);
@@ -69,14 +69,16 @@ function installFetchMock({ ghlCustomFields, searchCustomFields }) {
       const parsed = JSON.parse(opts.body || "{}");
       mondayCalls.push(parsed);
       const isCreate = /create_item/.test(parsed.query || "");
-      // items_page queries are the dedupe lookups — return no matches.
+      // items_page queries are the dedupe lookups.
       return {
         ok: true,
         status: 200,
         json: async () => ({
           data: isCreate
-            ? { create_item: { id: String(9000 + mondayCalls.length) } }
-            : { boards: [{ items_page: { items: [] } }] },
+            // Deterministic ids so dedupe tests can reference them by name
+            // instead of guessing at call ordering.
+            ? { create_item: { id: String(parsed.variables?.board) === "18424840911" ? "CONTACT1" : "LEAD1" } }
+            : { boards: [{ items_page: { items: existingItems || [] } }] },
         }),
         text: async () => "{}",
       };
@@ -95,8 +97,8 @@ function makeRes() {
   };
 }
 
-async function run({ ghlCustomFields, searchCustomFields, payload }) {
-  const mondayCalls = installFetchMock({ ghlCustomFields, searchCustomFields });
+async function run({ ghlCustomFields, searchCustomFields, existingItems, payload }) {
+  const mondayCalls = installFetchMock({ ghlCustomFields, searchCustomFields, existingItems });
   const res = makeRes();
   await handler({ method: "POST", query: { secret: "test-secret" }, body: payload }, res);
   const create = mondayCalls.filter(c => /create_item/.test(c.query || ""));
@@ -279,6 +281,39 @@ async function run({ ghlCustomFields, searchCustomFields, payload }) {
   eq(rPhone.leadName, "Executive Pastor @ Grace Chapel", "recovered with phone alone");
   truthy(rPhone.res.body?.diag?.ghl?.trace?.some(t => /byPhone|usedPhoneSearch/.test(t)),
      "trace records the phone lookup");
+
+  // ── Scenario 4e — dedupe must key on the person, not the title ───────────
+  // "Role — ???" is generic by construction. Two different candidates hiring
+  // the same role with no church produce an IDENTICAL title, so title-based
+  // dedupe would silently swallow the second lead. Regression guard.
+  console.log("\n4e. Two different people sharing a generic title both land");
+  const sameTitleOtherPerson = [{
+    id: "111", name: "Lead / Senior Pastor — ???",
+    created_at: new Date(Date.now() - 3600 * 1000).toISOString(),
+    column_values: [{ linked_item_ids: ["7777"] }],   // a DIFFERENT contact
+  }];
+  const rDupe = await run({
+    ghlCustomFields: [{ id: CF.role, value: "Lead / Senior Pastor" }],
+    existingItems: sameTitleOtherPerson,
+    payload: { contact_id: "TESTCONTACT", first_name: "New", last_name: "Person",
+               email: "new@example.org", phone: "+15559990000" },
+  });
+  eq(rDupe.leadName, "Lead / Senior Pastor — ???", "same generic title as an existing lead");
+  truthy(rDupe.leadCols, "a NEW lead row was still created for a different person");
+
+  console.log("\n4f. A genuine GHL retry for the SAME person is still deduped");
+  const rRetry = await run({
+    ghlCustomFields: [{ id: CF.role, value: "Lead / Senior Pastor" }],
+    existingItems: [{
+      id: "222", name: "Lead / Senior Pastor — ???",
+      created_at: new Date(Date.now() - 600 * 1000).toISOString(),
+      column_values: [{ linked_item_ids: ["CONTACT1"] }],  // the contact created in this run
+    }],
+    payload: { contact_id: "TESTCONTACT", first_name: "Same", last_name: "Person",
+               email: "same@example.org", phone: "+15558880000" },
+  });
+  falsy(rRetry.leadCols, "no duplicate lead row created for the same linked contact");
+  eq(rRetry.res.code, 200, "still 200 so GHL stops retrying");
 
   // ── Scenario 5 — response diagnostics ─────────────────────────────────────
   console.log("\n5. Response carries diagnostics but never lead PII");
