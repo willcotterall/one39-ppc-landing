@@ -126,7 +126,7 @@ async function run({ ghlCustomFields, payload }) {
       submitted_at: "2026-08-20T23:33:13.230Z",
     },
   });
-  eq(r.leadName, "Lead / Senior Pastor — Apostle Shands", "lead title is no longer a bare person name");
+  eq(r.leadName, "Lead / Senior Pastor — ???", "title reads Role — ???, never a person name in the church slot");
   eq(r.leadCols?.text_mm5hcd2d, "Lead / Senior Pastor", "Role column filled from payload");
   eq(r.leadCols?.color_mm5hjjxz?.label, "6 - 12 months", "Timeline mapped from payload");
   eq(r.leadCols?.color_mm5he334?.label, "1,000 - 2,499", "Attendance mapped from payload");
@@ -165,7 +165,9 @@ async function run({ ghlCustomFields, payload }) {
       submitted_at: "2026-08-20T23:33:13.230Z",
     },
   });
-  eq(r3.leadName, "Rory Comtois", "falls back to the person's name");
+  // Nothing at all resolved: the person's name is the only identifier left, and
+  // "??? — ???" would tell an SM nothing. This is the one case that keeps it.
+  eq(r3.leadName, "Rory Comtois", "total failure still falls back to the person's name");
   truthy(r3.leadCols?.long_text_mm5hrgzb?.includes("ENRICHMENT GAP"), "gap banner present");
   truthy(r3.leadCols?.long_text_mm5hrgzb?.includes("role"), "banner names the missing fields");
   falsy(r3.leadCols?.color_mm5hjjxz, "Timeline column left blank, not stamped Unknown");

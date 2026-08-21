@@ -682,10 +682,15 @@ async function createLead(token, data) {
   const role = (data.position || "").trim();
   const church = (data.church || "").trim();
   const nameFallback = `${data.first || ""} ${data.last || ""}`.trim();
+  // Lead titles describe the OPENING, not the person: the slot after the
+  // separator is always the church. Will 2026-08-21 — a person's name sitting
+  // where the church belongs reads like the church is called "Kervens".
+  // Unknown church is "???", matching the unknown-role convention already used
+  // on the line above it.
   let leadName;
   if (role && church)      leadName = `${role} @ ${church}`;
   else if (church)         leadName = `??? @ ${church}`;
-  else if (role)           leadName = `${role} — ${nameFallback}`.trim();
+  else if (role)           leadName = `${role} — ???`;
   else                     leadName = nameFallback || "PPC lead";
 
   // Idempotency: if a GHL retry already produced this lead in the last 48h,
@@ -723,7 +728,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-20-payload-reader-fix",
+      version: "2026-08-21-church-required-and-naming",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
