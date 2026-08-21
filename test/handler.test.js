@@ -192,6 +192,45 @@ async function run({ ghlCustomFields, payload }) {
   falsy(r4.leadCols?.text_mm5h11je, "church NOT taken from the location object");
   truthy(r4.res.body?.diag?.payloadKeys?.includes("user"), "payload keys echoed for diagnosis");
 
+  // ── Scenario 4b — city/state must survive to the monday columns ──────────
+  console.log("\n4b. City and State reach the board from every source they can");
+  const rCity = await run({
+    ghlCustomFields: null,
+    payload: {
+      contact_id: "TESTCONTACT", first_name: "Pat", last_name: "Lin",
+      email: "pat@example.org", phone: "+15554440000",
+      "contact.position_hiring_for": "Executive Pastor",
+      city: "Dallas", state: "tx",
+    },
+  });
+  eq(rCity.leadCols?.text_mm5hke00, "Dallas", "City written from a flat payload key");
+  eq(rCity.leadCols?.text_mm5h5vzx, "TX", "State normalized to 2-letter uppercase");
+  truthy(rCity.res.body?.diag?.resolved?.city, "city reported in diag");
+
+  const rNative = await run({
+    ghlCustomFields: [{ id: CF.role, value: "Executive Pastor" }],
+    payload: {
+      contact_id: "TESTCONTACT", first_name: "Pat", last_name: "Lin",
+      email: "pat@example.org", phone: "+15554440000",
+      contact: { city: "Tulsa", state: "OK" },
+    },
+  });
+  eq(rNative.leadCols?.text_mm5hke00, "Tulsa", "City read from a nested contact object");
+  eq(rNative.leadCols?.text_mm5h5vzx, "OK", "State read from a nested contact object");
+
+  const rLoc = await run({
+    ghlCustomFields: [
+      { id: CF.role, value: "Executive Pastor" },
+      { id: "YqPGLHhoyynXXf3bPfVs", value: "Nashville, TN" },
+    ],
+    payload: {
+      contact_id: "TESTCONTACT", first_name: "Pat", last_name: "Lin",
+      email: "pat@example.org", phone: "+15554440000",
+    },
+  });
+  eq(rLoc.leadCols?.text_mm5hke00, "Nashville", "City split out of the Location custom field");
+  eq(rLoc.leadCols?.text_mm5h5vzx, "TN", "State split out of the Location custom field");
+
   // ── Scenario 5 — response diagnostics ─────────────────────────────────────
   console.log("\n5. Response carries diagnostics but never lead PII");
   const blob = JSON.stringify(r3.res.body);

@@ -728,7 +728,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-21-church-required-and-naming",
+      version: "2026-08-21-forms-identical-city-state",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -866,10 +866,33 @@ module.exports = async function handler(req, res) {
   const rawSource = pickField(body, "source", "contact.source", "trigger");
   const sourceLabel = "PPC Ads";
 
-  // City + state — added to the form 2026-08-10. Read from payload if GHL
-  // passes them through. Enrichment can fill these later if blank.
-  const city  = pickField(body, "city", "contact.city") || (ghlSource && ghlSource.city) || "";
-  const state = pickField(body, "state", "contact.state") || (ghlSource && ghlSource.state) || "";
+  // City + state. Measured 2026-08-21: GHL has NO city/state custom field, and
+  // 0 of 600 contacts carry a native city — so historically these have died
+  // before reaching us regardless of what the form collected. Both forms now
+  // require them, so try every place the value could survive:
+  //   1. the webhook payload, flat or nested, in any key spelling
+  //   2. GHL's native contact.city / contact.state
+  //   3. the unused "Location" custom field (contact.location), which is where
+  //      a "Dallas, TX" style value would land if it were mapped there
+  //   4. Anthropic church enrichment further down, which fills blanks
+  const A_CITY  = ["city", "contact.city", "City"];
+  const A_STATE = ["state", "contact.state", "State", "st"];
+
+  let city  = pickField(body, ...A_CITY)  || deepFind(body, A_CITY)  || (ghlSource && ghlSource.city)  || "";
+  let state = pickField(body, ...A_STATE) || deepFind(body, A_STATE) || (ghlSource && ghlSource.state) || "";
+
+  // "Dallas, TX" / "Dallas TX" in the Location custom field -> split it out.
+  if (!city || !state) {
+    const loc = (ghlGetCF(ghlSource, GHL_CF_LOCATION) || "").trim();
+    const m = loc.match(/^\s*(.+?)[,\s]+([A-Za-z]{2})\s*$/);
+    if (m) {
+      if (!city)  city  = m[1].trim();
+      if (!state) state = m[2].toUpperCase();
+    } else if (loc && !city) {
+      city = loc;
+    }
+  }
+  if (state) state = state.trim().toUpperCase().slice(0, 2);
 
   if (!first && !last && !email && !phone) {
     return res
@@ -946,6 +969,11 @@ module.exports = async function handler(req, res) {
         church: !!church,
         attendance: !!attendance,
         timeline: !!timeline,
+        // Deliberately reported but NOT in the board's gap banner: both forms
+        // require these now, but GHL has nowhere to store them yet, so they
+        // would fire on every single lead and train SMs to ignore the banner.
+        city: !!city,
+        state: !!state,
       },
       ghl: {
         tokenPresent: !!process.env.GHL_TOKEN,
