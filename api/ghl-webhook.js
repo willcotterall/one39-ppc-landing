@@ -135,6 +135,29 @@ function ghlGetCF(contact, cfId) {
  * email hits a different endpoint that reliably returns customFields.
  * Returns the first matching contact or null.
  */
+/**
+ * LAST-RESORT LOOKUP by phone. Phone is required on both forms, so if the
+ * payload's contact id and email are both unreadable — which is exactly what
+ * broke this pipeline for weeks — this still finds the record. GHL's search
+ * endpoint was measured working from Vercel 2026-08-21 (200, customFields
+ * present, ~155ms).
+ */
+async function ghlFindContactByPhone(phone, trace = []) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (digits.length < 10) { trace.push("byPhone:SKIPPED_NO_PHONE"); return null; }
+  const token = process.env.GHL_TOKEN;
+  if (!token) { trace.push("byPhone:NO_TOKEN"); return null; }
+  const url = `${GHL_API}/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(digits.slice(-10))}`;
+  const body = await ghlGet(url, token, "byPhone", respHasCF, trace);
+  if (!body) return null;
+  // Match on the last 10 digits so formatting differences cannot cause a
+  // wrong-contact match. Never match on name.
+  const hit = (body.contacts || []).find(c =>
+    String(c.phone || "").replace(/\D/g, "").endsWith(digits.slice(-10))) || null;
+  if (hit) console.log(`[ghl] phone fallback matched ${hit.id}`);
+  return hit;
+}
+
 async function ghlFindContactByEmail(email, trace = []) {
   if (!email) { trace.push("byEmail:SKIPPED_NO_EMAIL"); return null; }
   const token = process.env.GHL_TOKEN;
@@ -748,7 +771,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-21-second-funnel-and-notes",
+      version: "2026-08-21-three-identifiers",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -851,6 +874,15 @@ module.exports = async function handler(req, res) {
       ghlSource = byEmail;
       ghlTrace.push("usedEmailSearch");
       console.log(`[ghl] using email-search record for ${email} (id-fetch had no custom fields)`);
+    }
+  }
+  // Third and last identifier. Between contact id, email and phone, at least
+  // one should always be readable — that is the whole point of having three.
+  if (!hasAnyCF(ghlSource) && phone) {
+    const byPhone = await ghlFindContactByPhone(phone, ghlTrace);
+    if (byPhone && (byPhone.customFields || []).length) {
+      ghlSource = byPhone;
+      ghlTrace.push("usedPhoneSearch");
     }
   }
 

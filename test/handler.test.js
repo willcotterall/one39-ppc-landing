@@ -50,13 +50,17 @@ const CF = {
  * @param ghlCustomFields  array to return from the GHL contact lookup, or null
  *                         to simulate the lookup yielding nothing usable
  */
-function installFetchMock({ ghlCustomFields }) {
+function installFetchMock({ ghlCustomFields, searchCustomFields }) {
   const mondayCalls = [];
   global.fetch = async (url, opts = {}) => {
     const u = String(url);
 
     if (u.includes("leadconnectorhq.com")) {
-      const contact = { id: "TESTCONTACT", customFields: ghlCustomFields || [] };
+      const contact = {
+        id: "TESTCONTACT",
+        phone: "+15557778888",
+        customFields: (u.includes("/contacts/?") ? (searchCustomFields ?? ghlCustomFields) : ghlCustomFields) || [],
+      };
       const payload = u.includes("/contacts/?") ? { contacts: [contact] } : { contact };
       return { ok: true, status: 200, json: async () => payload, text: async () => JSON.stringify(payload) };
     }
@@ -91,8 +95,8 @@ function makeRes() {
   };
 }
 
-async function run({ ghlCustomFields, payload }) {
-  const mondayCalls = installFetchMock({ ghlCustomFields });
+async function run({ ghlCustomFields, searchCustomFields, payload }) {
+  const mondayCalls = installFetchMock({ ghlCustomFields, searchCustomFields });
   const res = makeRes();
   await handler({ method: "POST", query: { secret: "test-secret" }, body: payload }, res);
   const create = mondayCalls.filter(c => /create_item/.test(c.query || ""));
@@ -255,6 +259,26 @@ async function run({ ghlCustomFields, payload }) {
      "the lead's own note reaches the board");
   truthy(rAlt.leadCols?.long_text_mm5hrgzb?.includes("Organization type: Church"), "org type surfaced");
   truthy(rAlt.res.body?.diag?.resolved?.notes, "notes reported in diag");
+
+  // ── Scenario 4d — third identifier: phone ────────────────────────────────
+  // The weeks-long outage happened because contact id AND email were both
+  // unreadable from the payload. Phone is required on both forms, so it is the
+  // backstop that makes identification fail-proof.
+  console.log("\n4d. Phone finds the contact when id and email are unreadable");
+  const rPhone = await run({
+    ghlCustomFields: null,                                  // by-id yields nothing
+    searchCustomFields: [                                   // but a search does
+      { id: CF.role, value: "Executive Pastor" },
+      { id: CF.church, value: "Grace Chapel" },
+    ],
+    payload: {
+      first_name: "Dale", last_name: "Ng",
+      phone: "(555) 777-8888",                              // no contact id, no email
+    },
+  });
+  eq(rPhone.leadName, "Executive Pastor @ Grace Chapel", "recovered with phone alone");
+  truthy(rPhone.res.body?.diag?.ghl?.trace?.some(t => /byPhone|usedPhoneSearch/.test(t)),
+     "trace records the phone lookup");
 
   // ── Scenario 5 — response diagnostics ─────────────────────────────────────
   console.log("\n5. Response carries diagnostics but never lead PII");
