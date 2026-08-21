@@ -58,6 +58,23 @@ const GHL_LOCATION_ID   = process.env.GHL_LOCATION_ID || "l9GVEA91SsaZzg0pNW61";
 // Keep an honest, attributable UA so a future 1010 can actually be traced to us.
 const GHL_UA = "One39-PPC-Webhook/1.0 (+https://hire.one39.co)";
 
+/**
+ * Dry-run auth. Gated on DIAG_TOKEN, which is a separate secret from
+ * WEBHOOK_SECRET and lives only in Vercel env. Lets us exercise the REAL
+ * handler against REAL GHL data in the REAL runtime and see exactly what would
+ * land on monday — without writing a junk row onto a client's live board.
+ * With DIAG_TOKEN unset, this is dead code.
+ */
+function isDryRun(req) {
+  const supplied = req?.query?.dry;
+  const expected = process.env.DIAG_TOKEN;
+  if (!expected || !supplied) return false;
+  const a = Buffer.from(String(supplied));
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return require("crypto").timingSafeEqual(a, b);
+}
+
 function ghlHeaders(token) {
   return {
     "Authorization": `Bearer ${token}`,
@@ -593,7 +610,11 @@ async function createContact(token, data) {
     [CC_REL]: { label: "Cold Reach Out" },
   };
   if (data.church)  columnValues[CC_CHURCH] = data.church;
-  if (data.position) columnValues[CC_TITLE] = data.position;
+  // Title is THIS PERSON's job title, not the role they are hiring for. It used
+  // to be filled with data.position ("Position Hiring For"), so an SM opening a
+  // church's HR director saw "Title: Worship Pastor". Actively misleading, so
+  // no fallback: blank beats wrong. The opening still shows on the Leads row.
+  if (data.jobTitle) columnValues[CC_TITLE] = data.jobTitle;
   if (data.email)   columnValues[CC_EMAIL] = { email: data.email, text: data.email };
   if (data.phone)
     columnValues[CC_PHONE] = {
@@ -620,6 +641,27 @@ async function createContact(token, data) {
     return null;
   }
   return r.data?.create_item?.id ?? null;
+}
+
+/**
+ * The lead row's title. Extracted so the dry-run path and the real write use
+ * the exact same code — a second copy would drift and the dry run would stop
+ * proving anything.
+ *
+ * Titles describe the OPENING, not the person: the slot after the separator is
+ * always the church. Will 2026-08-21 — a person's name sitting where the church
+ * belongs reads like the church is called "Kervens". Unknown church is "???",
+ * matching the unknown-role convention on the line above it. The final fallback
+ * keeps the person's name because "??? — ???" would tell an SM nothing.
+ */
+function buildLeadName(data) {
+  const role = (data.position || "").trim();
+  const church = (data.church || "").trim();
+  const nameFallback = `${data.first || ""} ${data.last || ""}`.trim();
+  if (role && church) return `${role} @ ${church}`;
+  if (church)         return `??? @ ${church}`;
+  if (role)           return `${role} — ???`;
+  return nameFallback || "PPC lead";
 }
 
 async function createLead(token, data) {
@@ -722,19 +764,7 @@ async function createLead(token, data) {
   }
   // NO owner, NO Client Manager assignment — SMs claim from Fresh group.
 
-  const role = (data.position || "").trim();
-  const church = (data.church || "").trim();
-  const nameFallback = `${data.first || ""} ${data.last || ""}`.trim();
-  // Lead titles describe the OPENING, not the person: the slot after the
-  // separator is always the church. Will 2026-08-21 — a person's name sitting
-  // where the church belongs reads like the church is called "Kervens".
-  // Unknown church is "???", matching the unknown-role convention already used
-  // on the line above it.
-  let leadName;
-  if (role && church)      leadName = `${role} @ ${church}`;
-  else if (church)         leadName = `??? @ ${church}`;
-  else if (role)           leadName = `${role} — ???`;
-  else                     leadName = nameFallback || "PPC lead";
+  const leadName = buildLeadName(data);
 
   // Idempotency: if a GHL retry already produced this lead in the last 48h,
   // return the existing row instead of creating a duplicate.
@@ -771,7 +801,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-21-three-identifiers",
+      version: "2026-08-21-dryrun-and-jobtitle",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -780,14 +810,18 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Secret check
-  const providedSecret = req.query.secret;
-  const expectedSecret = process.env.WEBHOOK_SECRET;
-  if (!expectedSecret) {
-    return res.status(500).json({ error: "Server missing WEBHOOK_SECRET" });
-  }
-  if (providedSecret !== expectedSecret) {
-    return res.status(401).json({ error: "Unauthorized" });
+  // Secret check. A dry run authenticates with DIAG_TOKEN instead and writes
+  // nothing, so it never needs the production webhook secret.
+  const dryRun = isDryRun(req);
+  if (!dryRun) {
+    const providedSecret = req.query.secret;
+    const expectedSecret = process.env.WEBHOOK_SECRET;
+    if (!expectedSecret) {
+      return res.status(500).json({ error: "Server missing WEBHOOK_SECRET" });
+    }
+    if (providedSecret !== expectedSecret) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
   }
 
   const mondayToken = process.env.MONDAY_TOKEN;
@@ -936,6 +970,15 @@ module.exports = async function handler(req, res) {
   ].map(x => (x || "").trim()).filter(Boolean).join(" — ");
 
   const orgType = (ghlGetCF(ghlSource, GHL_CF_ORG_TYPE) || "").trim();
+
+  // The submitter's OWN title, for their Client Contacts row. Distinct from
+  // `position`, which is the opening they want filled.
+  const jobTitle = (
+    ghlGetCF(ghlSource, GHL_CF_JOB_TITLE) ||
+    pickCustomField(body, GHL_CF_JOB_TITLE) ||
+    pickField(body, "job_title", "contact.job_title") ||
+    ""
+  ).trim();
   const attendance = resolveField(GHL_CF_ATTENDANCE, A_ATTEND);
   const timeline   = resolveField(GHL_CF_TIMELINE, A_TIMELINE);
 
@@ -996,7 +1039,36 @@ module.exports = async function handler(req, res) {
     ghlCfCount: (ghlSource?.customFields || []).length,
     leadNotes,
     orgType,
+    jobTitle,
   };
+
+  if (dryRun) {
+    // Everything above ran for real — payload parsing, the GHL lookups, field
+    // resolution, mapping, naming. Only the two monday writes are skipped.
+    return res.status(200).json({
+      dryRun: true,
+      wouldCreateLeadNamed: buildLeadName(data),
+      resolved: {
+        role: data.position || null,
+        church: data.church || null,
+        city: data.city || null,
+        state: data.state || null,
+        attendance: mapAttendance(data.attendance),
+        timeline: mapTimeline(data.timeline),
+        jobTitle: data.jobTitle || null,
+        notes: data.leadNotes || null,
+        orgType: data.orgType || null,
+      },
+      ghl: {
+        contactIdSeen: !!ghlContactId,
+        emailSeen: !!email,
+        phoneSeen: !!phone,
+        cfCount: (ghlSource?.customFields || []).length,
+        trace: ghlTrace,
+      },
+      payloadKeys: Object.keys(body || {}).slice(0, 40),
+    });
+  }
 
   // Always create the Contact row first (so we can link the Lead to it).
   // Idempotency: reuse a contact created in the last 48h with the same email
