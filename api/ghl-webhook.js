@@ -36,15 +36,15 @@ const GHL_CF_TIMELINE   = "H2R6Qkt2dDGICqv0SLRl";
 const GHL_CF_LOCATION   = "YqPGLHhoyynXXf3bPfVs";
 const GHL_LOCATION_ID   = process.env.GHL_LOCATION_ID || "l9GVEA91SsaZzg0pNW61";
 
-// ROOT CAUSE, found 2026-08-20. GHL sits behind Cloudflare, which rejects
-// requests that carry no User-Agent with 403 "error 1010" (client banned) —
-// NOT rate limiting, and NOT an auth failure, so the token looked fine.
-// Node's native fetch sends no User-Agent by default, so EVERY GHL lookup from
-// this function had been silently 403ing. Attendance/timeline still landed
-// because those arrive in the webhook payload; church and role exist only on
-// the contact record, so they came back empty on every PPC lead.
-// Verified: identical request 403s without this header, 200s with it.
-const GHL_UA = "Mozilla/5.0 (compatible; One39-PPC-Webhook/1.0; +https://hire.one39.co)";
+// RETRACTED 2026-08-20 evening. This block previously claimed the root cause was
+// "Node's fetch sends no User-Agent, so Cloudflare 1010s every GHL call".
+// BOTH halves are false, measured: Node's fetch always sends `user-agent: node`,
+// and GHL returns 200 even with no UA at all. The only string observed to trigger
+// 1010 is `Python-urllib/*` — which was the diagnostic script used that morning,
+// never this function. Commit 20ef379 was therefore a no-op, which is exactly why
+// the very next lead failed identically six hours later.
+// Keep an honest, attributable UA so a future 1010 can actually be traced to us.
+const GHL_UA = "One39-PPC-Webhook/1.0 (+https://hire.one39.co)";
 
 function ghlHeaders(token) {
   return {
@@ -55,30 +55,56 @@ function ghlHeaders(token) {
   };
 }
 
-/** GET against GHL with one retry, since Cloudflare occasionally 403s a cold call. */
-async function ghlGet(url, token, label) {
-  for (let attempt = 0; attempt < 2; attempt++) {
+/**
+ * GET against GHL, retried with backoff.
+ *
+ * `isUsable` matters as much as the status code: a 200 carrying an empty
+ * customFields array is indistinguishable from success to the old code, which
+ * accepted it and never retried. That is the exact shape a read-after-write lag
+ * takes, and the webhook fires seconds after the contact is created.
+ *
+ * `trace` is passed in per request, never module scope — this runs on Fluid
+ * compute, where several leads share one Node process, so shared mutable state
+ * would splice one lead's diagnostics into another lead's board row.
+ */
+async function ghlGet(url, token, label, isUsable = () => true, trace = []) {
+  const delays = [400, 1200];
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const r = await fetch(url, { headers: ghlHeaders(token) });
-      if (r.ok) return await r.json();
-      console.warn(`[ghl] ${label} HTTP ${r.status}${attempt ? "" : " — retrying"}`);
+      if (r.ok) {
+        const json = await r.json();
+        if (isUsable(json)) { trace.push(`${label}:200:ok:a${attempt}`); return json; }
+        trace.push(`${label}:200:NO_CF:a${attempt}`);
+      } else {
+        const snip = (await r.text().catch(() => "")).slice(0, 100);
+        trace.push(`${label}:${r.status}:a${attempt}`);
+        console.warn(`[ghl] ${label} HTTP ${r.status} ${snip}`);
+      }
     } catch (e) {
-      console.warn(`[ghl] ${label} threw: ${e.message}${attempt ? "" : " — retrying"}`);
+      trace.push(`${label}:THREW:a${attempt}`);
+      console.warn(`[ghl] ${label} threw: ${e.message}`);
     }
-    if (attempt === 0) await new Promise(r => setTimeout(r, 600));
+    if (attempt < 2) await new Promise(r => setTimeout(r, delays[attempt]));
   }
   return null;
+}
+
+/** True if a GHL response actually carries at least one custom field. */
+function respHasCF(b) {
+  const rec = b?.contact || (b?.contacts || [])[0] || b;
+  return Array.isArray(rec?.customFields) && rec.customFields.length > 0;
 }
 
 /**
  * Fetch the full GHL contact record by ID. Guarantees customFields presence.
  * Requires GHL_TOKEN env var (Bearer). Returns null on failure.
  */
-async function ghlFetchContact(contactId) {
-  if (!contactId) return null;
+async function ghlFetchContact(contactId, trace = []) {
+  if (!contactId) { trace.push("byId:SKIPPED_NO_ID"); return null; }
   const token = process.env.GHL_TOKEN;
-  if (!token) { console.warn("[ghl] GHL_TOKEN env var not set — cannot enrich contact"); return null; }
-  const body = await ghlGet(`${GHL_API}/contacts/${contactId}`, token, `contact fetch ${contactId}`);
+  if (!token) { trace.push("byId:NO_TOKEN"); console.warn("[ghl] GHL_TOKEN env var not set — cannot enrich contact"); return null; }
+  const body = await ghlGet(`${GHL_API}/contacts/${contactId}`, token, "byId", respHasCF, trace);
   if (!body) return null;
   return body.contact || body || null;
 }
@@ -97,12 +123,12 @@ function ghlGetCF(contact, cfId) {
  * email hits a different endpoint that reliably returns customFields.
  * Returns the first matching contact or null.
  */
-async function ghlFindContactByEmail(email) {
-  if (!email) return null;
+async function ghlFindContactByEmail(email, trace = []) {
+  if (!email) { trace.push("byEmail:SKIPPED_NO_EMAIL"); return null; }
   const token = process.env.GHL_TOKEN;
-  if (!token) return null;
+  if (!token) { trace.push("byEmail:NO_TOKEN"); return null; }
   const url = `${GHL_API}/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(email)}`;
-  const body = await ghlGet(url, token, `email search ${email}`);
+  const body = await ghlGet(url, token, "byEmail", respHasCF, trace);
   if (!body) return null;
   const hit = (body.contacts || [])[0] || null;
   if (hit) console.log(`[ghl] email-search fallback matched ${hit.id} (customFields: ${(hit.customFields || []).length})`);
@@ -284,6 +310,16 @@ function mapAttendance(sizeText) {
   // contained under 500.
   if (s.includes("under 500") || s.includes("less than 500")) return "200 - 499";
   if (s.includes("2500+") || s.includes("2500 +") || s.includes("2,500+") || s.includes("over 2500") || s.includes("more than 2500")) return "2,500+";
+  // Guard the numeric fallback. Anything that is obviously not a congregation
+  // size — a timestamp, a URL, an email, a phone number, a bare year — would
+  // otherwise be bucketed as a plausible-looking attendance and mask a total
+  // enrichment failure. Measured: "2026-08-20T23:33:13Z" mapped to
+  // "1,000 - 2,499", which is indistinguishable from a real answer.
+  const raw = String(sizeText);
+  if (/\d{4}-\d{2}-\d{2}|t\d{2}:\d{2}|@|https?:/i.test(raw)) return "Unknown";
+  if (/^\s*(19|20)\d{2}\s*$/.test(raw)) return "Unknown";          // bare year
+  if (/^\D*\d{10,}\D*$/.test(raw)) return "Unknown";                 // phone-shaped: a real 10+ digit run
+
   // Then try numeric extraction
   const m = s.match(/(\d+)/);
   if (!m) return "Unknown";
@@ -298,14 +334,29 @@ function mapAttendance(sizeText) {
 // Map a free-text timeline string to a NEW board Timeline status label.
 // String patterns are checked in specificity order. Blank / unmapped → "Unknown".
 function mapTimeline(text) {
-  if (!text) return "Unknown";
-  const s = String(text).trim().toLowerCase();
+  // Qualitative phrases are tested BEFORE any numeric extraction. Ordering is
+  // the whole game here: "Within 3 months" contains a 3, so a numeric-first
+  // version silently answers "3 - 6 months". Likewise "6+ Months" must not be
+  // matched by a loose rule that also swallows "3 - 6 Months".
+  const s = String(text || "").trim().toLowerCase()
+    .replace(/%2b/g, "+")      // form-encoded plus that never got decoded
+    .replace(/\s+/g, " ");
   if (!s) return "Unknown";
+
   if (/(asap|immediately|urgent|right away|\bnow\b)/.test(s)) return "ASAP";
-  if (/(1\s*-\s*3|1\s*to\s*3|1\s*–\s*3|within 3|next month|few weeks)/.test(s)) return "1 - 3 months";
-  if (/(3\s*-\s*6|3\s*to\s*6|3\s*–\s*6|quarter|few months)/.test(s)) return "3 - 6 months";
-  if (/(6\s*-\s*12|6\s*to\s*12|6\s*–\s*12|next year|6\+\s*months|6\s*months\+)/.test(s)) return "6 - 12 months";
   if (/(someday|no rush|not soon|later|just exploring|exploring)/.test(s)) return "Someday";
+  if (/(within 3|next month|few weeks)/.test(s)) return "1 - 3 months";
+  if (/(quarter|few months)/.test(s)) return "3 - 6 months";
+  if (/next year/.test(s)) return "6 - 12 months";
+
+  // Only trust digits when the string actually reads like a duration, so a
+  // stray id or year can never be bucketed as a hiring timeline.
+  if (/\d+\s*(-|–|to|\+)/.test(s) || /\d+\s*months?/.test(s)) {
+    const lo = Number((s.match(/\d+/g) || [])[0]);
+    if (lo === 1) return "1 - 3 months";
+    if (lo === 3) return "3 - 6 months";
+    if (lo === 6) return "6 - 12 months";
+  }
   return "Unknown";
 }
 
@@ -325,14 +376,74 @@ function sanitizePhoneDigits(raw) {
  */
 function pickField(body, ...names) {
   for (const n of names) {
-    const parts = n.split(".");
+    // LITERAL flat key first. GHL's own field keys ARE dotted strings
+    // ("contact.ideal_timeline"), and the old dot-split-only version walked
+    // them as a nested path, so a flat key with that exact name was
+    // unreadable. That is why timeline and position could never resolve from
+    // the payload while undotted "attendance" could. Found 2026-08-20.
+    const flat = body && typeof body === "object" ? body[n] : undefined;
+    if (typeof flat === "string" && flat.trim()) return flat.trim();
+    if (typeof flat === "number") return String(flat);
+
+    // Then the same alias as a nested path — preserves the old behaviour.
     let cur = body;
-    for (const p of parts) {
+    for (const p of n.split(".")) {
       cur = cur && typeof cur === "object" ? cur[p] : undefined;
     }
     if (typeof cur === "string" && cur.trim()) return cur.trim();
+    if (typeof cur === "number") return String(cur);
   }
   return "";
+}
+
+function normKey(k) {
+  return String(k).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Last-resort reader. The GHL Custom Webhook body is hand-authored in the GHL
+ * UI, so key naming is not under our control — "Weekly Attendance",
+ * "weeklyAttendance", "contact.weekly_attendance" and "weekly-attendance" all
+ * normalize to the same thing here.
+ *
+ * TWO DELIBERATE LIMITS, both learned the hard way:
+ *
+ * 1. Identity fields never come through here. GHL payloads carry `user`,
+ *    `assignedTo` and `location` objects that each have their own `email`.
+ *    Deep-scanning for an identity field would pick up a staffing manager's
+ *    address, and since contact dedupe matches on email within 48h, every
+ *    later lead would collapse into one Client Contacts row. Only descriptive
+ *    fields (role, church, attendance, timeline) use this.
+ * 2. Those same sibling objects are skipped outright. A GHL `location` has its
+ *    own `name`/`companyName`, which would otherwise be read as the church.
+ */
+const DEEP_SKIP_KEYS = new Set([
+  "user", "assignedto", "assigneduser", "location", "workflow", "account",
+  "calendar", "appointment", "opportunity", "company",
+]);
+
+function deepFind(body, aliases, depth = 5) {
+  const want = new Set(aliases.map(normKey));
+  const seen = new Set();
+  const walk = (o, d) => {
+    if (!o || typeof o !== "object" || d > depth || seen.has(o)) return "";
+    seen.add(o);
+    // Direct hits at this level first.
+    for (const [k, v] of Object.entries(o)) {
+      if (!want.has(normKey(k))) continue;
+      if (typeof v === "string" && v.trim()) return v.trim();
+      if (typeof v === "number") return String(v);
+    }
+    // Then descend, skipping containers that describe someone other than the lead.
+    for (const [k, v] of Object.entries(o)) {
+      if (!v || typeof v !== "object") continue;
+      if (DEEP_SKIP_KEYS.has(normKey(k))) continue;
+      const hit = walk(v, d + 1);
+      if (hit) return hit;
+    }
+    return "";
+  };
+  return walk(body, 0);
 }
 
 /**
@@ -492,6 +603,18 @@ async function createLead(token, data) {
   let demographic = data.church
     ? `${suspiciousPrefix}Church demographic pending enrichment — SM should verify.`
     : `${suspiciousPrefix}Church name missing on form — SM to collect during discovery call.`;
+
+  // Enrichment-gap banner. Church is deliberately NOT in this list: it is
+  // optional on the form, so a church-less lead is normal and flagging it would
+  // make the banner noise from day one. Role, attendance and timeline are all
+  // required questions, so any of those missing means enrichment genuinely
+  // failed and the SM is looking at an incomplete row.
+  const missing = [];
+  if (!data.position)   missing.push("role");
+  if (!data.attendance) missing.push("attendance");
+  if (!data.timeline)   missing.push("timeline");
+  // The banner itself is applied AFTER the Anthropic enrichment below, which
+  // reassigns `demographic` and would otherwise wipe it.
   let enrichedCity = data.city || null;
   let enrichedState = data.state || null;
   // Race the enrichment against a 6s timeout. 2026-08-17 root cause of the
@@ -518,6 +641,18 @@ async function createLead(token, data) {
     console.warn("[enrich] church enrichment threw:", e.message);
   }
 
+  // Applied last, so the Anthropic rewrite above can't drop it.
+  if (missing.length) {
+    const trace = (data.ghlTrace || []).slice(0, 12).join(" | ") || "none";
+    demographic =
+      `⚠ ENRICHMENT GAP — missing: ${missing.join(", ")}. ` +
+      `GHL custom fields seen: ${data.ghlCfCount ?? 0}. Trace: ${trace}\n\n` + demographic;
+  }
+  // monday's long_text rejects writes over 2000 chars, and one rejected column
+  // value fails the whole create_item — which drops the lead while GHL sees a
+  // 200 and never retries. Cap last, after every writer has had its say.
+  if (demographic.length > 1900) demographic = demographic.slice(0, 1897) + "...";
+
   const columnValues = {
     [LD_STAGE]:         { label: "New" },
     [LD_SOURCE]:        { label: "PPC Ads" },
@@ -525,10 +660,13 @@ async function createLead(token, data) {
     [LD_LAST_ACTIVITY]: { date: todayISO() },
     [LD_FIT]:           { label: "Unknown" },
     [LD_INTERESTED]:    { label: "Interested" },
-    [LD_TIMELINE]:      { label: timelineLabel },
-    [LD_ATTENDANCE]:    { label: attendanceLabel },
     [LD_DEMOGRAPHIC]:   demographic,
   };
+  // Only write these when we actually resolved something. Leaving the cell
+  // blank rather than stamping "Unknown" is what lets a human — or a later
+  // backfill — tell "enrichment failed" apart from "the lead said unknown".
+  if (timelineLabel   !== "Unknown") columnValues[LD_TIMELINE]   = { label: timelineLabel };
+  if (attendanceLabel !== "Unknown") columnValues[LD_ATTENDANCE] = { label: attendanceLabel };
   if (data.position)  columnValues[LD_ROLE]   = data.position;
   if (data.church)    columnValues[LD_CHURCH] = data.church;
   if (enrichedCity)   columnValues[LD_CITY]   = enrichedCity;
@@ -585,7 +723,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-20-cloudflare-ua-fix",
+      version: "2026-08-20-payload-reader-fix",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -652,9 +790,17 @@ module.exports = async function handler(req, res) {
   // position/attendance/timeline all populated. Always fetch the full contact
   // from GHL by ID to guarantee we have the data. Falls back to payload if the
   // fetch fails (missing GHL_TOKEN, network error, etc.).
+  // Per-request, never module scope — Fluid compute shares one process across
+  // concurrent leads. This is the only durable record of what the GHL calls
+  // did: Vercel's historical runtime logs are unreachable from CLI and API.
+  const ghlTrace = [];
+
+  // Deliberately NOT deep-scanned. A stray `id` elsewhere in the payload would
+  // be a workflow or location id, and a wrong contact id is worse than none.
   const ghlContactId =
     pickField(body, "contact_id", "contactId", "contact.id", "id");
-  const ghlContact = ghlContactId ? await ghlFetchContact(ghlContactId) : null;
+  if (!ghlContactId) ghlTrace.push("noContactIdInPayload");
+  const ghlContact = ghlContactId ? await ghlFetchContact(ghlContactId, ghlTrace) : null;
   if (ghlContact) {
     console.log(`[ghl] enriched from /contacts/${ghlContactId} — customFields: ${(ghlContact.customFields || []).length}`);
   } else if (ghlContactId) {
@@ -665,12 +811,20 @@ module.exports = async function handler(req, res) {
   // If the by-id fetch came back without usable custom fields, fall back to an
   // email search before reading any field. Added 2026-08-19 after every PPC lead
   // from 8/17-8/19 landed with church empty while GHL held the value.
+  // The old gate looked only at church and position. A candidate can legitimately
+  // have neither (church is optional on the form), so a perfectly good record
+  // carrying attendance and timeline was thrown away and a round trip wasted.
+  const CF_IDS = [GHL_CF_CHURCH, GHL_CF_POSITION, GHL_CF_ATTENDANCE, GHL_CF_TIMELINE];
+  const hasAnyCF = (c) => !!c && Array.isArray(c.customFields) && CF_IDS.some(id => ghlGetCF(c, id));
+
   let ghlSource = ghlContact;
-  const idFetchUsable = ghlGetCF(ghlContact, GHL_CF_CHURCH) || ghlGetCF(ghlContact, GHL_CF_POSITION);
-  if (!idFetchUsable && email) {
-    const byEmail = await ghlFindContactByEmail(email);
+  if (!hasAnyCF(ghlSource) && email) {
+    const byEmail = await ghlFindContactByEmail(email, ghlTrace);
+    // Accept on ANY custom fields, not just the four we map — the record may
+    // still carry city/state we want, and it is strictly better than nothing.
     if (byEmail && (byEmail.customFields || []).length) {
       ghlSource = byEmail;
+      ghlTrace.push("usedEmailSearch");
       console.log(`[ghl] using email-search record for ${email} (id-fetch had no custom fields)`);
     }
   }
@@ -682,22 +836,27 @@ module.exports = async function handler(req, res) {
     console.error(`[ghl] ALARM: no custom fields for ${email || "(no email)"} — church/role will be EMPTY. Check GHL_TOKEN and Cloudflare 403s.`);
   }
 
-  const church =
-    ghlGetCF(ghlSource, GHL_CF_CHURCH) ||
-    pickCustomField(body, GHL_CF_CHURCH) ||
-    pickField(body, "company_name", "companyName", "contact.company_name", "contact.companyName", "organization");
-  const position =
-    ghlGetCF(ghlSource, GHL_CF_POSITION) ||
-    pickCustomField(body, GHL_CF_POSITION) ||
-    pickField(body, "position", "position_hiring_for", "contact.position_hiring_for");
-  const attendance =
-    ghlGetCF(ghlSource, GHL_CF_ATTENDANCE) ||
-    pickCustomField(body, GHL_CF_ATTENDANCE) ||
-    pickField(body, "attendance", "weekly_attendance", "contact.weekly_attendance", "contact.attendance");
-  const timeline =
-    ghlGetCF(ghlSource, GHL_CF_TIMELINE) ||
-    pickCustomField(body, GHL_CF_TIMELINE) ||
-    pickField(body, "timeline", "ideal_timeline", "contact.ideal_timeline");
+  // Alias lists deliberately include GHL's own dotted fieldKeys (measured live
+  // from GET /locations/<id>/customFields), the landing page's data-field
+  // names, and the Title Case forms a human might type into the GHL webhook
+  // action. Note church previously had NO church_name alias at all, so it
+  // could only ever come from the contact record, never the payload.
+  const A_POSITION = ["position", "role", "position_hiring_for", "contact.position_hiring_for", "Position Hiring For", "job_title"];
+  const A_CHURCH   = ["church", "church_name", "contact.church_name", "Church Name", "company_name", "companyName", "contact.company_name", "contact.companyName", "organization"];
+  const A_ATTEND   = ["attendance", "weekly_attendance", "contact.weekly_attendance", "contact.attendance", "Weekly Attendance", "average_attendance"];
+  const A_TIMELINE = ["timeline", "ideal_timeline", "contact.ideal_timeline", "Ideal Timeline", "hiring_timeline"];
+
+  const resolveField = (cfId, aliases) =>
+    ghlGetCF(ghlSource, cfId) ||
+    pickCustomField(body, cfId) ||
+    pickField(body, ...aliases) ||
+    deepFind(body, aliases) ||
+    "";
+
+  const church     = resolveField(GHL_CF_CHURCH, A_CHURCH);
+  const position   = resolveField(GHL_CF_POSITION, A_POSITION);
+  const attendance = resolveField(GHL_CF_ATTENDANCE, A_ATTEND);
+  const timeline   = resolveField(GHL_CF_TIMELINE, A_TIMELINE);
 
   const rawSource = pickField(body, "source", "contact.source", "trigger");
   const sourceLabel = "PPC Ads";
@@ -726,6 +885,11 @@ module.exports = async function handler(req, res) {
     attendance,
     position,
     timeline,
+    // Carried onto the board when enrichment came up short. Vercel's historical
+    // runtime logs are unreachable, so the Demographic column is the only
+    // durable, human-readable record of what the GHL calls actually did.
+    ghlTrace,
+    ghlCfCount: (ghlSource?.customFields || []).length,
   };
 
   // Always create the Contact row first (so we can link the Lead to it).
@@ -750,12 +914,42 @@ module.exports = async function handler(req, res) {
     return res.status(502).json({ error: "Monday writes failed" });
   }
 
+  // A contact row without a Lead row is a SILENTLY LOST LEAD: the old code
+  // returned 200 here, so GHL saw success and never retried, and nothing on the
+  // board showed the gap. Shout about it. Still 200 — a retry would duplicate
+  // the contact row that already succeeded (that was Bug 1).
+  if (contactId && !leadId) {
+    console.error(`[monday] ALARM: contact ${contactId} written but LEAD WRITE FAILED — lead is lost. trace: ${ghlTrace.join(" | ")}`);
+  }
+
   return res.status(200).json({
     ok: true,
     contactId,
     leadId,
     sourceLabel,
     attendance,
+    // Diagnostics — keys and booleans only, never lead PII. GHL stores the
+    // webhook action's response in its workflow execution log, which is the one
+    // runtime log channel we can actually read: Vercel's historical logs are
+    // unreachable from both the CLI and the public API. `payloadKeys` alone
+    // answers the question this whole investigation could not measure — what
+    // the hand-authored Custom Webhook body actually sends.
+    diag: {
+      payloadKeys: Object.keys(body || {}).slice(0, 40),
+      resolved: {
+        position: !!position,
+        church: !!church,
+        attendance: !!attendance,
+        timeline: !!timeline,
+      },
+      ghl: {
+        tokenPresent: !!process.env.GHL_TOKEN,
+        contactIdSeen: !!ghlContactId,
+        emailSeen: !!email,
+        cfCount: (ghlSource?.customFields || []).length,
+        trace: ghlTrace,
+      },
+    },
     target: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
   });
 };

@@ -15,10 +15,22 @@
  * credentials. Gated behind a fixed token so it isn't an open probe.
  *
  * Usage:
- *   GET /api/ghl-diag?t=<TOKEN>&contactId=<id>[&email=<addr>]
+ *   GET /api/ghl-diag?t=$DIAG_TOKEN&contactId=<id>[&email=<addr>]
  */
 
-const DIAG_TOKEN = "d7f4a1c9-one39-diag-2026-08-20";
+// Token lives in the DIAG_TOKEN env var, never in source — this repo is PUBLIC,
+// and a literal here would stay in git history forever even after the file is
+// deleted. With the var unset the endpoint is simply off.
+const crypto = require("crypto");
+
+function tokenOk(supplied) {
+  const expected = process.env.DIAG_TOKEN;
+  if (!expected || !supplied) return false;
+  const a = Buffer.from(String(supplied));
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 const GHL_API = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
@@ -81,7 +93,7 @@ async function probe(label, url, token, withUA) {
 }
 
 module.exports = async function handler(req, res) {
-  if ((req.query?.t || "") !== DIAG_TOKEN) {
+  if (!tokenOk(req.query?.t)) {
     return res.status(404).json({ error: "Not found" });
   }
 
