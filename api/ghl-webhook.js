@@ -34,6 +34,18 @@ const GHL_CF_CHURCH     = "w0sm9wpx7ODNrmJfqq9Q";
 const GHL_CF_ATTENDANCE = "p4pYMUi5AsSoy6sGlH0w";
 const GHL_CF_TIMELINE   = "H2R6Qkt2dDGICqv0SLRl";
 const GHL_CF_LOCATION   = "YqPGLHhoyynXXf3bPfVs";
+
+// A SECOND funnel writes to a parallel set of fields. Measured 2026-08-21 over
+// 700 contacts: 20 have their church in "Name of organization" while Church
+// Name is empty, 20 have the role in "what position do you want to hire?" with
+// Position Hiring For empty, and 77 carry a Notes value the board never saw.
+// Reading only the primary four silently threw all of that away.
+const GHL_CF_ORG_NAME   = "MI2gVKP3HtCFzE0PPztw";  // "Name of organization"
+const GHL_CF_ORG_TYPE   = "MSpojZudzGhuuIDyPFRo";  // "Type of organization"
+const GHL_CF_WANT_HIRE  = "Or55TMbK7iXHtEXrDY50";  // "what position do you want to hire?"
+const GHL_CF_JOB_TITLE  = "UroWlloe7OceSzfAu1SK";  // the SUBMITTER's own title — NOT the opening
+const GHL_CF_NOTES      = "46Tu8iCoq2CKEgE3JrQE";  // "Notes"
+const GHL_CF_ANYTHING   = "LSOie3i4OABlA7G9BlZB";  // "Anything else we should know before the call?"
 const GHL_LOCATION_ID   = process.env.GHL_LOCATION_ID || "l9GVEA91SsaZzg0pNW61";
 
 // RETRACTED 2026-08-20 evening. This block previously claimed the root cause was
@@ -641,6 +653,14 @@ async function createLead(token, data) {
     console.warn("[enrich] church enrichment threw:", e.message);
   }
 
+  // The lead's own words go ABOVE the researched church demographic — it is
+  // first-hand and an SM reads the top of the cell first.
+  const ownWords = [
+    data.orgType ? `Organization type: ${data.orgType}.` : "",
+    data.leadNotes ? `In their words: "${data.leadNotes}"` : "",
+  ].filter(Boolean).join(" ");
+  if (ownWords) demographic = `${ownWords}\n\n${demographic}`;
+
   // Applied last, so the Anthropic rewrite above can't drop it.
   if (missing.length) {
     const trace = (data.ghlTrace || []).slice(0, 12).join(" | ") || "none";
@@ -728,7 +748,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-21-forms-identical-city-state",
+      version: "2026-08-21-second-funnel-and-notes",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -858,8 +878,32 @@ module.exports = async function handler(req, res) {
     deepFind(body, aliases) ||
     "";
 
-  const church     = resolveField(GHL_CF_CHURCH, A_CHURCH);
-  const position   = resolveField(GHL_CF_POSITION, A_POSITION);
+  // Church: primary field, then the second funnel's "Name of organization".
+  // Role: primary field, then "what position do you want to hire?" — which is
+  // the OPENING. Job Title is deliberately not used: it holds the submitter's
+  // own title ("CEO", "chief of staff"), not the role they are hiring for.
+  const church =
+    resolveField(GHL_CF_CHURCH, A_CHURCH) ||
+    ghlGetCF(ghlSource, GHL_CF_ORG_NAME) ||
+    pickCustomField(body, GHL_CF_ORG_NAME) ||
+    pickField(body, "name_of_organization", "contact.name_of_organization") ||
+    "";
+  const position =
+    resolveField(GHL_CF_POSITION, A_POSITION) ||
+    ghlGetCF(ghlSource, GHL_CF_WANT_HIRE) ||
+    pickCustomField(body, GHL_CF_WANT_HIRE) ||
+    pickField(body, "what_position_do_you_want_to_hire", "contact.what_position_do_you_want_to_hire") ||
+    "";
+
+  // The lead's own words. 77 of 700 contacts had a Notes value that never
+  // reached the board — the single most useful thing an SM can read before a
+  // discovery call ("Apostolic/ pentecostal.").
+  const leadNotes = [
+    ghlGetCF(ghlSource, GHL_CF_NOTES) || pickCustomField(body, GHL_CF_NOTES) || pickField(body, "notes", "contact.notes"),
+    ghlGetCF(ghlSource, GHL_CF_ANYTHING) || pickCustomField(body, GHL_CF_ANYTHING),
+  ].map(x => (x || "").trim()).filter(Boolean).join(" — ");
+
+  const orgType = (ghlGetCF(ghlSource, GHL_CF_ORG_TYPE) || "").trim();
   const attendance = resolveField(GHL_CF_ATTENDANCE, A_ATTEND);
   const timeline   = resolveField(GHL_CF_TIMELINE, A_TIMELINE);
 
@@ -918,6 +962,8 @@ module.exports = async function handler(req, res) {
     // durable, human-readable record of what the GHL calls actually did.
     ghlTrace,
     ghlCfCount: (ghlSource?.customFields || []).length,
+    leadNotes,
+    orgType,
   };
 
   // Always create the Contact row first (so we can link the Lead to it).
@@ -974,6 +1020,7 @@ module.exports = async function handler(req, res) {
         // would fire on every single lead and train SMs to ignore the banner.
         city: !!city,
         state: !!state,
+        notes: !!leadNotes,
       },
       ghl: {
         tokenPresent: !!process.env.GHL_TOKEN,

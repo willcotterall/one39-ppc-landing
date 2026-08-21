@@ -231,6 +231,31 @@ async function run({ ghlCustomFields, payload }) {
   eq(rLoc.leadCols?.text_mm5hke00, "Nashville", "City split out of the Location custom field");
   eq(rLoc.leadCols?.text_mm5h5vzx, "TN", "State split out of the Location custom field");
 
+  // ── Scenario 4c — the second funnel's fields ─────────────────────────────
+  // 20 of 700 contacts carry their church in "Name of organization" with
+  // Church Name empty, and the role in "what position do you want to hire?".
+  console.log("\n4c. Second-funnel fields are read, not dropped");
+  const rAlt = await run({
+    ghlCustomFields: [
+      { id: "MI2gVKP3HtCFzE0PPztw", value: "Passion Vineyard Fellowship" },  // Name of organization
+      { id: "Or55TMbK7iXHtEXrDY50", value: "Associate Pastor of Worship" },  // what position to hire
+      { id: "UroWlloe7OceSzfAu1SK", value: "Lead Pastor" },                  // submitter's OWN title
+      { id: "46Tu8iCoq2CKEgE3JrQE", value: "Apostolic/ pentecostal." },      // Notes
+      { id: "MSpojZudzGhuuIDyPFRo", value: "Church" },                       // Type of organization
+    ],
+    payload: { contact_id: "TESTCONTACT", first_name: "Wade", last_name: "Buzzard",
+               email: "wade@example.org", phone: "+15556660000" },
+  });
+  eq(rAlt.leadName, "Associate Pastor of Worship @ Passion Vineyard Fellowship",
+     "church + role recovered from the second funnel's fields");
+  eq(rAlt.leadCols?.text_mm5h11je, "Passion Vineyard Fellowship", "Church column from Name of organization");
+  eq(rAlt.leadCols?.text_mm5hcd2d, "Associate Pastor of Worship", "Role is the OPENING, not the submitter's own title");
+  truthy(!rAlt.leadCols?.text_mm5hcd2d?.includes("Lead Pastor"), "Job Title never mistaken for the opening");
+  truthy(rAlt.leadCols?.long_text_mm5hrgzb?.includes('In their words: "Apostolic/ pentecostal."'),
+     "the lead's own note reaches the board");
+  truthy(rAlt.leadCols?.long_text_mm5hrgzb?.includes("Organization type: Church"), "org type surfaced");
+  truthy(rAlt.res.body?.diag?.resolved?.notes, "notes reported in diag");
+
   // ── Scenario 5 — response diagnostics ─────────────────────────────────────
   console.log("\n5. Response carries diagnostics but never lead PII");
   const blob = JSON.stringify(r3.res.body);
