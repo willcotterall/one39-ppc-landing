@@ -315,6 +315,44 @@ async function run({ ghlCustomFields, searchCustomFields, existingItems, payload
   falsy(rRetry.leadCols, "no duplicate lead row created for the same linked contact");
   eq(rRetry.res.code, 200, "still 200 so GHL stops retrying");
 
+  // ── Scenario 4g — real-world dirt from the second funnel ─────────────────
+  console.log("\n4g. Trailing whitespace and unparseable Location are handled");
+  const rDirty = await run({
+    ghlCustomFields: [
+      { id: "MI2gVKP3HtCFzE0PPztw", value: "Elizabeth Baptist Church  " },   // trailing spaces, real data
+      { id: "Or55TMbK7iXHtEXrDY50", value: "Executive Assistant  " },
+      { id: "YqPGLHhoyynXXf3bPfVs", value: "Atlanta, GA" },
+    ],
+    payload: { contact_id: "TESTCONTACT", first_name: "Teesha", last_name: "Carter",
+               email: "t@example.org", phone: "+15551112222" },
+  });
+  eq(rDirty.leadCols?.text_mm5h11je, "Elizabeth Baptist Church", "church trimmed");
+  eq(rDirty.leadCols?.text_mm5hcd2d, "Executive Assistant", "role trimmed");
+  eq(rDirty.leadName, "Executive Assistant @ Elizabeth Baptist Church", "title has no double spaces");
+  eq(rDirty.leadCols?.text_mm5hke00, "Atlanta", "City from a clean 'City, ST'");
+  eq(rDirty.leadCols?.text_mm5h5vzx, "GA", "State from a clean 'City, ST'");
+
+  const rAddr = await run({
+    ghlCustomFields: [
+      { id: CF.role, value: "Manager" },
+      { id: "YqPGLHhoyynXXf3bPfVs", value: "2416 2nd St, Richlands VA 24641" },  // real record
+    ],
+    payload: { contact_id: "TESTCONTACT", first_name: "Jimmy", last_name: "Richardson",
+               email: "j@example.org", phone: "+15553334444" },
+  });
+  eq(rAddr.leadCols?.text_mm5hke00, "Richlands", "city extracted from a full street address");
+  eq(rAddr.leadCols?.text_mm5h5vzx, "VA", "state extracted from a full street address");
+
+  const rJunk = await run({
+    ghlCustomFields: [
+      { id: CF.role, value: "Manager" },
+      { id: "YqPGLHhoyynXXf3bPfVs", value: "somewhere out past the ridge" },
+    ],
+    payload: { contact_id: "TESTCONTACT", first_name: "A", last_name: "B",
+               email: "ab@example.org", phone: "+15555556666" },
+  });
+  falsy(rJunk.leadCols?.text_mm5hke00, "unparseable Location leaves City blank, not garbage");
+
   // ── Scenario 5 — response diagnostics ─────────────────────────────────────
   console.log("\n5. Response carries diagnostics but never lead PII");
   const blob = JSON.stringify(r3.res.body);

@@ -142,7 +142,13 @@ async function ghlFetchContact(contactId, trace = []) {
 function ghlGetCF(contact, cfId) {
   if (!contact || !Array.isArray(contact.customFields)) return null;
   const match = contact.customFields.find(f => f.id === cfId);
-  return match?.value ?? null;
+  const v = match?.value;
+  if (v === undefined || v === null) return null;
+  // Trim here rather than at each call site. Measured 2026-08-21: the second
+  // funnel's values carry trailing spaces ("Elizabeth Baptist Church  "), which
+  // were landing in the monday columns verbatim.
+  if (typeof v === "string") { const t = v.trim(); return t === "" ? null : t; }
+  return v;
 }
 
 /**
@@ -844,7 +850,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-21-dedupe-by-contact",
+      version: "2026-08-21-trim-and-address",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -1043,16 +1049,27 @@ module.exports = async function handler(req, res) {
   let city  = pickField(body, ...A_CITY)  || deepFind(body, A_CITY)  || (ghlSource && ghlSource.city)  || "";
   let state = pickField(body, ...A_STATE) || deepFind(body, A_STATE) || (ghlSource && ghlSource.state) || "";
 
-  // "Dallas, TX" / "Dallas TX" in the Location custom field -> split it out.
+  // The Location custom field is free text and is NOT reliably "City, ST".
+  // A real record holds "2416 2nd St, Richlands VA 24641". Parse only shapes we
+  // actually recognise; if it does not parse, leave the columns blank rather
+  // than writing a street address into City. Blank beats wrong.
   if (!city || !state) {
     const loc = (ghlGetCF(ghlSource, GHL_CF_LOCATION) || "").trim();
-    const m = loc.match(/^\s*(.+?)[,\s]+([A-Za-z]{2})\s*$/);
-    if (m) {
+    let m;
+    if ((m = loc.match(/^(.+?),\s*([A-Za-z]{2})$/))) {
+      // "Dallas, TX"
       if (!city)  city  = m[1].trim();
       if (!state) state = m[2].toUpperCase();
-    } else if (loc && !city) {
-      city = loc;
+    } else if ((m = loc.match(/(?:^|,)\s*([A-Za-z][A-Za-z .'-]*?)\s+([A-Za-z]{2})\s+\d{5}(?:-\d{4})?$/))) {
+      // "...2nd St, Richlands VA 24641" -> Richlands / VA
+      if (!city)  city  = m[1].trim();
+      if (!state) state = m[2].toUpperCase();
+    } else if ((m = loc.match(/^([A-Za-z][A-Za-z .'-]*?)\s+([A-Za-z]{2})$/))) {
+      // "Dallas TX"
+      if (!city)  city  = m[1].trim();
+      if (!state) state = m[2].toUpperCase();
     }
+    // Anything else (a bare street address, a country, free prose) is ignored.
   }
   if (state) state = state.trim().toUpperCase().slice(0, 2);
 
