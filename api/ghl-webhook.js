@@ -454,6 +454,91 @@ function pickField(body, ...names) {
   return "";
 }
 
+const US_STATES = {
+  alabama:"AL", alaska:"AK", arizona:"AZ", arkansas:"AR", california:"CA", colorado:"CO",
+  connecticut:"CT", delaware:"DE", "district of columbia":"DC", florida:"FL", georgia:"GA",
+  hawaii:"HI", idaho:"ID", illinois:"IL", indiana:"IN", iowa:"IA", kansas:"KS", kentucky:"KY",
+  louisiana:"LA", maine:"ME", maryland:"MD", massachusetts:"MA", michigan:"MI", minnesota:"MN",
+  mississippi:"MS", missouri:"MO", montana:"MT", nebraska:"NE", nevada:"NV",
+  "new hampshire":"NH", "new jersey":"NJ", "new mexico":"NM", "new york":"NY",
+  "north carolina":"NC", "north dakota":"ND", ohio:"OH", oklahoma:"OK", oregon:"OR",
+  pennsylvania:"PA", "rhode island":"RI", "south carolina":"SC", "south dakota":"SD",
+  tennessee:"TN", texas:"TX", utah:"UT", vermont:"VT", virginia:"VA", washington:"WA",
+  "west virginia":"WV", wisconsin:"WI", wyoming:"WY", "puerto rico":"PR",
+};
+const STATE_CODES = new Set(Object.values(US_STATES));
+// Tokens that mean "this is a street", so the words before them are not a city.
+const STREET_WORDS = new Set([
+  "st","street","rd","road","ave","avenue","blvd","boulevard","dr","drive","ln","lane",
+  "hwy","highway","ih","pkwy","parkway","ct","court","cir","circle","way","ste","suite","apt","unit",
+]);
+// A bare compass direction is the tail of a street address, never a city —
+// "5513 IH 35 South" would otherwise yield a city of "South".
+const DIRECTIONALS = new Set(["n","s","e","w","ne","nw","se","sw","north","south","east","west"]);
+
+/**
+ * Pull a city and state out of GHL's free-text "Location" field.
+ *
+ * Written against every value that actually exists in the CRM (18 of them),
+ * which range from "Atlanta" to "3605 E ZALESKY RD - Cottonwood, AZ 86326".
+ * Returns {city, state}, either of which may be "" — a wrong city is worse
+ * than a blank one, so anything unrecognised yields nothing.
+ */
+function parseLocation(raw) {
+  let t = String(raw || "").trim().replace(/\s+/g, " ");
+  if (!t) return { city: "", state: "" };
+
+  t = t.replace(/\s*\d{5}(?:-\d{4})?\s*$/, "").trim();   // drop a trailing ZIP
+  t = t.replace(/[,\s-]+$/, "");
+
+  let state = "";
+  // Trailing full state name ("Statesboro, Georgia", "largo florida")
+  for (const [name, code] of Object.entries(US_STATES)) {
+    const re = new RegExp(`[,\\s]${name}$`, "i");
+    if (re.test(t)) { state = code; t = t.replace(re, ""); break; }
+  }
+  // Trailing 2-letter code ("Bethlehem PA", "durham, nc")
+  if (!state) {
+    const m = t.match(/[,\s]([A-Za-z]{2})$/);
+    if (m && STATE_CODES.has(m[1].toUpperCase())) {
+      state = m[1].toUpperCase();
+      t = t.slice(0, m.index);
+    }
+  }
+  t = t.replace(/[,\s-]+$/, "").trim();
+
+  // Take the last comma- or dash-separated chunk: the city sits at the end.
+  const chunk = t.split(/\s*[,]\s*|\s+-\s+/).pop().trim();
+
+  // Drop street-address noise: leading numeric tokens, and everything up to and
+  // including the last street word ("1199 Clay Street Winter Park" -> "Winter Park").
+  let words = chunk.split(" ").filter(Boolean);
+  const norm = (w) => w.toLowerCase().replace(/\./g, "");
+  let lastStreet = -1;
+  words.forEach((w, i) => { if (STREET_WORDS.has(norm(w))) lastStreet = i; });
+  if (lastStreet >= 0) words = words.slice(lastStreet + 1);
+  while (words.length && /\d/.test(words[0])) words.shift();
+
+  if (words.length && words.every(w => DIRECTIONALS.has(norm(w)))) return { city: "", state };
+
+  let cityRaw = words.join(" ").trim();
+  // A city is letters, spaces and light punctuation — never digits — and is at
+  // most three words ("Salt Lake City"). The word cap is what separates a place
+  // name from free prose like "somewhere out past the ridge". Verified against
+  // every real value: the longest is two words.
+  if (!cityRaw ||
+      /\d/.test(cityRaw) ||
+      !/^[A-Za-z][A-Za-z .'-]*$/.test(cityRaw) ||
+      words.length > 3 ||
+      cityRaw.length > 40) {
+    return { city: "", state };
+  }
+  const city = cityRaw.split(" ")
+    .map(w => w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)
+    .join(" ");
+  return { city, state };
+}
+
 function normKey(k) {
   return String(k).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -850,7 +935,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-21-trim-and-address",
+      version: "2026-08-21-location-parser",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -1049,27 +1134,12 @@ module.exports = async function handler(req, res) {
   let city  = pickField(body, ...A_CITY)  || deepFind(body, A_CITY)  || (ghlSource && ghlSource.city)  || "";
   let state = pickField(body, ...A_STATE) || deepFind(body, A_STATE) || (ghlSource && ghlSource.state) || "";
 
-  // The Location custom field is free text and is NOT reliably "City, ST".
-  // A real record holds "2416 2nd St, Richlands VA 24641". Parse only shapes we
-  // actually recognise; if it does not parse, leave the columns blank rather
-  // than writing a street address into City. Blank beats wrong.
+  // The Location custom field is free text. Written against all 18 real values
+  // present in the CRM — see parseLocation() and its test cases.
   if (!city || !state) {
-    const loc = (ghlGetCF(ghlSource, GHL_CF_LOCATION) || "").trim();
-    let m;
-    if ((m = loc.match(/^(.+?),\s*([A-Za-z]{2})$/))) {
-      // "Dallas, TX"
-      if (!city)  city  = m[1].trim();
-      if (!state) state = m[2].toUpperCase();
-    } else if ((m = loc.match(/(?:^|,)\s*([A-Za-z][A-Za-z .'-]*?)\s+([A-Za-z]{2})\s+\d{5}(?:-\d{4})?$/))) {
-      // "...2nd St, Richlands VA 24641" -> Richlands / VA
-      if (!city)  city  = m[1].trim();
-      if (!state) state = m[2].toUpperCase();
-    } else if ((m = loc.match(/^([A-Za-z][A-Za-z .'-]*?)\s+([A-Za-z]{2})$/))) {
-      // "Dallas TX"
-      if (!city)  city  = m[1].trim();
-      if (!state) state = m[2].toUpperCase();
-    }
-    // Anything else (a bare street address, a country, free prose) is ignored.
+    const parsed = parseLocation(ghlGetCF(ghlSource, GHL_CF_LOCATION));
+    if (!city && parsed.city) city = parsed.city;
+    if (!state && parsed.state) state = parsed.state;
   }
   if (state) state = state.trim().toUpperCase().slice(0, 2);
 
