@@ -50,7 +50,7 @@ const CF = {
  * @param ghlCustomFields  array to return from the GHL contact lookup, or null
  *                         to simulate the lookup yielding nothing usable
  */
-function installFetchMock({ ghlCustomFields, searchCustomFields, existingItems }) {
+function installFetchMock({ ghlCustomFields, searchCustomFields, existingItems, contactEmail }) {
   const mondayCalls = [];
   global.fetch = async (url, opts = {}) => {
     const u = String(url);
@@ -59,6 +59,7 @@ function installFetchMock({ ghlCustomFields, searchCustomFields, existingItems }
       const contact = {
         id: "TESTCONTACT",
         phone: "+15557778888",
+        email: contactEmail,
         customFields: (u.includes("/contacts/?") ? (searchCustomFields ?? ghlCustomFields) : ghlCustomFields) || [],
       };
       const payload = u.includes("/contacts/?") ? { contacts: [contact] } : { contact };
@@ -97,8 +98,8 @@ function makeRes() {
   };
 }
 
-async function run({ ghlCustomFields, searchCustomFields, existingItems, payload }) {
-  const mondayCalls = installFetchMock({ ghlCustomFields, searchCustomFields, existingItems });
+async function run({ ghlCustomFields, searchCustomFields, existingItems, contactEmail, payload }) {
+  const mondayCalls = installFetchMock({ ghlCustomFields, searchCustomFields, existingItems, contactEmail });
   const res = makeRes();
   await handler({ method: "POST", query: { secret: "test-secret" }, body: payload }, res);
   const create = mondayCalls.filter(c => /create_item/.test(c.query || ""));
@@ -138,8 +139,13 @@ async function run({ ghlCustomFields, searchCustomFields, existingItems, payload
   eq(r.leadCols?.color_mm5he334?.label, "1,000 - 2,499", "Attendance mapped from payload");
   // Church IS required on both forms as of 8/21, so its absence is a real gap.
   truthy(r.leadCols?.long_text_mm5hrgzb?.includes("ENRICHMENT GAP"), "gap banner fires for the missing church");
-  truthy(r.leadCols?.long_text_mm5hrgzb?.includes("church"), "banner names church");
-  falsy(r.leadCols?.long_text_mm5hrgzb?.includes("timeline"), "timeline is OPTIONAL on the form — must not be flagged");
+  // Assert against the "missing:" clause only — the banner also lists payload
+  // KEY NAMES, and one of those is "contact.ideal_timeline", which would make a
+  // naive substring check pass for the wrong reason.
+  const missingClause = (r.leadCols?.long_text_mm5hrgzb || "").match(/missing: ([^.]+)\./)?.[1] || "";
+  truthy(missingClause.includes("church"), "banner names church as missing");
+  falsy(missingClause.includes("timeline"), "timeline is OPTIONAL on the form — must not be flagged");
+  truthy(r.leadCols?.long_text_mm5hrgzb?.includes("Payload keys:"), "banner carries the payload key names");
   truthy(r.contactCreated, "Client Contacts row still created");
   eq(r.res.code, 200, "returns 200 so GHL does not retry");
 
@@ -391,6 +397,55 @@ async function run({ ghlCustomFields, searchCustomFields, existingItems, payload
                email: "office@gracechapel.org", phone: "+15551230000" },
   });
   falsy(rTrue.leadCols, "identical retry did not duplicate");
+
+  // ── Scenario 4j — recover the contact id when GHL sends it under an
+  //     unexpected key, and refuse a candidate that is not this person ───────
+  console.log("\n4j. Contact id recovered by verified scan; wrong ids rejected");
+  const rScan = await run({
+    ghlCustomFields: [
+      { id: CF.role, value: "Worship Pastor" },
+      { id: CF.church, value: "Grace Chapel" },
+    ],
+    contactEmail: "scan@example.org",
+    payload: {
+      // No contact_id / contactId / contact.id anywhere — the real GHL body's
+      // actual shape, per the "noContactIdInPayload" trace on a live lead.
+      customData: { theContactRef: "TESTCONTACT9876543210" },
+      first_name: "Scan", last_name: "Target",
+      email: "scan@example.org", phone: "+15551239999",
+    },
+  });
+  eq(rScan.leadName, "Worship Pastor @ Grace Chapel", "recovered via the id scan");
+  truthy(rScan.res.body?.diag?.ghl?.trace?.some(t => /idFromScan/.test(t)), "trace records the scan");
+
+  // An id-shaped value in an ordinary key, whose fetched record belongs to
+  // someone else. It must be fetched, checked, and thrown away.
+  const rWrongId = await run({
+    ghlCustomFields: [{ id: CF.role, value: "Worship Pastor" }],
+    contactEmail: "someone.else@example.org",     // fetched record is NOT our lead
+    payload: {
+      customData: { ref: "SOMEOTHERID1234567890" },
+      first_name: "Mismatch", last_name: "Case",
+      email: "ours@example.org", phone: "+15550001111",
+    },
+  });
+  truthy(rWrongId.res.body?.diag?.ghl?.trace?.some(t => /idRejected/.test(t)),
+     "a candidate whose email does not match this lead is rejected");
+  falsy(rWrongId.leadCols?.text_mm5hcd2d, "and its data never reaches the board");
+
+  // Ids living under user/location/workflow are never even considered.
+  const rSkip = await run({
+    ghlCustomFields: [{ id: CF.role, value: "Worship Pastor" }],
+    contactEmail: "someone.else@example.org",
+    payload: {
+      workflow: { runId: "WORKFLOWID1234567890" },
+      location: { id: "LOCATIONID1234567890" },
+      first_name: "Skip", last_name: "Case",
+      email: "ours@example.org", phone: "+15550002222",
+    },
+  });
+  falsy(rSkip.res.body?.diag?.ghl?.trace?.some(t => /idFromScan|idRejected/.test(t)),
+     "workflow and location ids are not even candidates");
 
   // ── Scenario 5 — response diagnostics ─────────────────────────────────────
   console.log("\n5. Response carries diagnostics but never lead PII");

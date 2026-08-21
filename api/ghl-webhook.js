@@ -58,6 +58,54 @@ const GHL_LOCATION_ID   = process.env.GHL_LOCATION_ID || "l9GVEA91SsaZzg0pNW61";
 // Keep an honest, attributable UA so a future 1010 can actually be traced to us.
 const GHL_UA = "One39-PPC-Webhook/1.0 (+https://hire.one39.co)";
 
+// Every custom field we read, in one place, so "did this lookup give us
+// anything useful" means the same thing everywhere.
+const ALL_CF_IDS = [
+  GHL_CF_CHURCH, GHL_CF_POSITION, GHL_CF_ATTENDANCE, GHL_CF_TIMELINE,
+  GHL_CF_ORG_NAME, GHL_CF_WANT_HIRE, GHL_CF_JOB_TITLE,
+  GHL_CF_NOTES, GHL_CF_ANYTHING, GHL_CF_ORG_TYPE, GHL_CF_LOCATION,
+];
+
+function hasUsableContact(c) {
+  if (!c || !Array.isArray(c.customFields)) return false;
+  return c.customFields.some(f => ALL_CF_IDS.includes(f?.id) && String(f?.value || "").trim());
+}
+
+/**
+ * Every id-SHAPED string in the payload, nearest-first. GHL ids are ~20-24
+ * chars of [A-Za-z0-9]. Callers MUST verify a candidate before trusting it —
+ * see the call site, which fetches each one and checks the record's email or
+ * phone against the payload.
+ */
+function collectIdCandidates(body) {
+  const out = [];
+  const seen = new Set();
+  const looksLikeId = (v) => typeof v === "string" && /^[A-Za-z0-9]{18,26}$/.test(v.trim());
+  const walk = (o, depth) => {
+    if (!o || typeof o !== "object" || depth > 4 || seen.has(o)) return;
+    seen.add(o);
+    for (const [k, v] of Object.entries(o)) {
+      if (DEEP_SKIP_KEYS.has(normKey(k))) continue;
+      if (looksLikeId(v) && !out.includes(v.trim())) out.push(v.trim());
+    }
+    for (const [k, v] of Object.entries(o)) {
+      if (v && typeof v === "object" && !DEEP_SKIP_KEYS.has(normKey(k))) walk(v, depth + 1);
+    }
+  };
+  walk(body, 0);
+  // Prefer keys that sound like a contact id.
+  const prioritized = [];
+  const walkNamed = (o, depth) => {
+    if (!o || typeof o !== "object" || depth > 4) return;
+    for (const [k, v] of Object.entries(o)) {
+      if (/contact.?id|^id$/i.test(k) && looksLikeId(v)) prioritized.push(v.trim());
+      if (v && typeof v === "object" && !DEEP_SKIP_KEYS.has(normKey(k))) walkNamed(v, depth + 1);
+    }
+  };
+  walkNamed(body, 0);
+  return [...new Set([...prioritized, ...out])].slice(0, 6);
+}
+
 function ghlHeaders(token) {
   return {
     "Authorization": `Bearer ${token}`,
@@ -79,8 +127,7 @@ function ghlHeaders(token) {
  * compute, where several leads share one Node process, so shared mutable state
  * would splice one lead's diagnostics into another lead's board row.
  */
-async function ghlGet(url, token, label, isUsable = () => true, trace = []) {
-  const delays = [400, 1200];
+async function ghlGet(url, token, label, isUsable = () => true, trace = [], delays = [400, 1200]) {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const r = await fetch(url, { headers: ghlHeaders(token) });
@@ -154,7 +201,7 @@ async function ghlFindContactByPhone(phone, trace = []) {
   const token = process.env.GHL_TOKEN;
   if (!token) { trace.push("byPhone:NO_TOKEN"); return null; }
   const url = `${GHL_API}/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(digits.slice(-10))}`;
-  const body = await ghlGet(url, token, "byPhone", respHasCF, trace);
+  const body = await ghlGet(url, token, "byPhone", respHasCF, trace, [800, 2500]);
   if (!body) return null;
   // Match on the last 10 digits so formatting differences cannot cause a
   // wrong-contact match. Never match on name.
@@ -169,7 +216,9 @@ async function ghlFindContactByEmail(email, trace = []) {
   const token = process.env.GHL_TOKEN;
   if (!token) { trace.push("byEmail:NO_TOKEN"); return null; }
   const url = `${GHL_API}/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(email)}`;
-  const body = await ghlGet(url, token, "byEmail", respHasCF, trace);
+  // The search index lags contact creation — measured at >11s on a real lead —
+  // so these two get a longer runway than the by-id fetch, which is not indexed.
+  const body = await ghlGet(url, token, "byEmail", respHasCF, trace, [800, 2500]);
   if (!body) return null;
   // GHL's `query=` is a SUBSTRING search, not an email filter — query="gmail.com"
   // returns everyone. Taking [0] could graft a stranger's church, role and
@@ -884,10 +933,16 @@ async function createLead(token, data) {
 
   // Applied last, so the Anthropic rewrite above can't drop it.
   if (missing.length) {
-    const trace = (data.ghlTrace || []).slice(0, 12).join(" | ") || "none";
+    const trace = (data.ghlTrace || []).slice(0, 14).join(" | ") || "none";
+    // The payload's KEY NAMES, not its values. GHL's Custom Webhook body is
+    // hand-authored and we still cannot see it any other way — Vercel's logs are
+    // unreachable. Putting the key list here means the next failure tells us
+    // exactly which key to read instead of guessing.
+    const keys = (data.payloadKeys || []).join(",") || "none";
     demographic =
       `⚠ ENRICHMENT GAP — missing: ${missing.join(", ")}. ` +
-      `GHL custom fields seen: ${data.ghlCfCount ?? 0}. Trace: ${trace}\n\n` + demographic;
+      `GHL custom fields seen: ${data.ghlCfCount ?? 0}. Trace: ${trace}. ` +
+      `Payload keys: ${keys}\n\n` + demographic;
   }
   // monday's long_text rejects writes over 2000 chars, and one rejected column
   // value fails the whole create_item — which drops the lead while GHL sees a
@@ -960,7 +1015,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       route: "/api/ghl-webhook",
-      version: "2026-08-21-review-fixes",
+      version: "2026-08-21-id-scan-and-index-lag",
       target_boards: { leads: LEADS_BOARD, contacts: CLIENT_CONTACTS_BOARD },
       hint: "POST with ?secret=... to sync a GHL contact to Monday",
     });
@@ -1019,12 +1074,37 @@ module.exports = async function handler(req, res) {
   // did: Vercel's historical runtime logs are unreachable from CLI and API.
   const ghlTrace = [];
 
-  // Deliberately NOT deep-scanned. A stray `id` elsewhere in the payload would
-  // be a workflow or location id, and a wrong contact id is worse than none.
   const ghlContactId =
     pickField(body, "contact_id", "contactId", "contact.id", "id");
   if (!ghlContactId) ghlTrace.push("noContactIdInPayload");
-  const ghlContact = ghlContactId ? await ghlFetchContact(ghlContactId, ghlTrace) : null;
+  let ghlContact = ghlContactId ? await ghlFetchContact(ghlContactId, ghlTrace) : null;
+
+  // No id under any known key. Sweep the payload for anything id-SHAPED and
+  // verify each candidate by fetching it and checking the record's own email or
+  // phone against the payload's. A wrong id cannot survive that check, which is
+  // what makes deep-scanning an identity field safe here.
+  //
+  // This matters because the by-id fetch is the ONLY lookup that is not served
+  // by GHL's search index. Measured 2026-08-21 on the Anthony Henderson lead:
+  // both the email and phone searches returned 200 with ZERO custom fields,
+  // three attempts each, 11 seconds after the contact was created — while the
+  // same searches return all 4 fields minutes later. Search is eventually
+  // consistent; by-id is not.
+  if (!hasUsableContact(ghlContact)) {
+    for (const cand of collectIdCandidates(body)) {
+      if (String(cand) === String(ghlContactId)) continue;
+      const probe = await ghlFetchContact(cand, ghlTrace);
+      if (!probe) continue;
+      const emailMatch = email && String(probe.email || "").trim().toLowerCase() === String(email).trim().toLowerCase();
+      const phoneMatch = phone && String(probe.phone || "").replace(/\D/g, "").endsWith(String(phone).replace(/\D/g, "").slice(-10));
+      if (emailMatch || phoneMatch) {
+        ghlTrace.push(`idFromScan:${cand}`);
+        ghlContact = probe;
+        break;
+      }
+      ghlTrace.push(`idRejected:${cand}`);
+    }
+  }
   if (ghlContact) {
     console.log(`[ghl] enriched from /contacts/${ghlContactId} — customFields: ${(ghlContact.customFields || []).length}`);
   } else if (ghlContactId) {
@@ -1038,15 +1118,8 @@ module.exports = async function handler(req, res) {
   // The old gate looked only at church and position. A candidate can legitimately
   // have neither (church is optional on the form), so a perfectly good record
   // carrying attendance and timeline was thrown away and a round trip wasted.
-  // Every field we read, not just the primary four. Second-funnel contacts have
-  // none of the primaries, so a SUCCESSFUL fetch was being thrown away and
-  // re-fetched twice — and the trace printed onto the board said the id lookup
-  // had failed when it had not.
-  const CF_IDS = [
-    GHL_CF_CHURCH, GHL_CF_POSITION, GHL_CF_ATTENDANCE, GHL_CF_TIMELINE,
-    GHL_CF_ORG_NAME, GHL_CF_WANT_HIRE, GHL_CF_JOB_TITLE,
-    GHL_CF_NOTES, GHL_CF_ANYTHING, GHL_CF_ORG_TYPE, GHL_CF_LOCATION,
-  ];
+  // Shared with hasUsableContact so "usable" cannot drift between the two.
+  const CF_IDS = ALL_CF_IDS;
   const hasAnyCF = (c) => !!c && Array.isArray(c.customFields) && CF_IDS.some(id => ghlGetCF(c, id));
 
   let ghlSource = ghlContact;
@@ -1186,6 +1259,7 @@ module.exports = async function handler(req, res) {
     leadNotes,
     orgType,
     jobTitle,
+    payloadKeys: Object.keys(body || {}).slice(0, 30),
   };
 
   // Always create the Contact row first (so we can link the Lead to it).
